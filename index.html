@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>CleanBot — AI Chat Widget Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cabinet Grotesk',sans-serif;background:#f0f0ea;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+
+/* DEMO PAGE BG */
+.demo-bg{text-align:center;margin-bottom:24px}
+.demo-bg h2{font-size:22px;font-weight:700;color:#0D0D0B;margin-bottom:6px}
+.demo-bg p{font-size:14px;color:#888}
+
+/* WIDGET LAUNCHER BUTTON */
+#launcher{position:fixed;bottom:28px;right:28px;width:60px;height:60px;background:#0F6E56;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 4px 20px rgba(15,110,86,.4);transition:transform .2s,box-shadow .2s;z-index:1000}
+#launcher:hover{transform:scale(1.08);box-shadow:0 6px 28px rgba(15,110,86,.5)}
+.launcher-pulse{position:absolute;width:100%;height:100%;border-radius:50%;background:rgba(15,110,86,.3);animation:lp 2s infinite}
+@keyframes lp{0%{transform:scale(1);opacity:.8}100%{transform:scale(1.7);opacity:0}}
+.notif-dot{position:absolute;top:4px;right:4px;width:14px;height:14px;background:#E63946;border-radius:50%;border:2px solid #f0f0ea;font-size:8px;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700}
+
+/* CHAT WINDOW */
+#chatwin{position:fixed;bottom:100px;right:28px;width:370px;background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.15);overflow:hidden;z-index:999;display:none;flex-direction:column;max-height:560px;animation:slideUp .25s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+#chatwin.open{display:flex}
+
+/* CHAT HEADER */
+.cw-head{background:linear-gradient(135deg,#0F6E56,#1D9E75);padding:16px 18px;display:flex;align-items:center;gap:12px}
+.cw-av{width:40px;height:40px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.cw-info{flex:1}
+.cw-name{font-size:14px;font-weight:700;color:#fff}
+.cw-status{font-size:12px;color:rgba(255,255,255,.75);display:flex;align-items:center;gap:5px;margin-top:2px}
+.cw-dot{width:6px;height:6px;border-radius:50%;background:#7FFFD4;animation:lp 2s infinite}
+.cw-close{background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:20px;padding:4px;line-height:1;transition:color .15s}
+.cw-close:hover{color:#fff}
+
+/* SCENARIO TABS */
+.cw-tabs{display:flex;overflow-x:auto;gap:0;border-bottom:1px solid #F0F0EA;background:#FAFAF7}
+.cw-tab{flex-shrink:0;padding:9px 14px;font-size:12px;font-weight:500;color:#888;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;white-space:nowrap}
+.cw-tab.on{color:#0F6E56;border-bottom-color:#0F6E56;font-weight:700}
+
+/* MESSAGES */
+.cw-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:#FAFAF7;min-height:200px;max-height:320px}
+.cmsg{display:flex;gap:8px;align-items:flex-end;animation:fadeUp .2s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.cmsg.u{flex-direction:row-reverse}
+.cbub{padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.55;max-width:80%}
+.cmsg.a .cbub{background:#fff;border:1px solid #EBEBEB;color:#1a1a1a;border-bottom-left-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.cmsg.u .cbub{background:#0F6E56;color:#fff;border-bottom-right-radius:3px}
+.cmsg-av{width:28px;height:28px;border-radius:50%;background:#E1F5EE;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;color:#0F6E56}
+
+.typing-ind{display:flex;gap:4px;padding:10px 14px;background:#fff;border:1px solid #EBEBEB;border-radius:16px;width:fit-content;border-bottom-left-radius:3px}
+.tdot{width:6px;height:6px;border-radius:50%;background:#bbb;animation:tdot 1s infinite}
+.tdot:nth-child(2){animation-delay:.15s}.tdot:nth-child(3){animation-delay:.3s}
+@keyframes tdot{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+/* QUICK REPLIES */
+.cw-qr{padding:8px 14px;display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid #F0F0EA;background:#fff;min-height:40px}
+.qr-chip{font-size:11px;padding:5px 11px;border-radius:20px;border:1px solid #E0E0D8;color:#555;cursor:pointer;transition:all .12s;white-space:nowrap}
+.qr-chip:hover{border-color:#1D9E75;color:#0F6E56;background:#F0FBF7}
+
+/* INPUT */
+.cw-input{display:flex;gap:8px;padding:12px 14px;border-top:1px solid #F0F0EA;background:#fff}
+.cw-input input{flex:1;padding:9px 13px;font-size:13px;font-family:'Cabinet Grotesk',sans-serif;border:1px solid #E0E0D8;border-radius:10px;outline:none;background:#FAFAF7;color:#1a1a1a;transition:border-color .15s}
+.cw-input input:focus{border-color:#1D9E75;background:#fff}
+.cw-send{width:36px;height:36px;border-radius:10px;background:#0F6E56;border:none;color:#fff;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.cw-send:hover{background:#1D9E75}
+.cw-send:disabled{background:#ccc;cursor:not-allowed}
+
+/* ERROR */
+.cw-err{font-size:11px;color:#C62828;background:#FFEBEE;padding:6px 14px;border-top:1px solid #FFCDD2}
+
+/* POWERED BY */
+.cw-footer{padding:8px 14px;text-align:center;font-size:10px;color:#bbb;background:#fff;border-top:1px solid #F8F8F4}
+.cw-footer span{color:#0F6E56;font-weight:700}
+
+/* WEBSITE MOCK */
+.website-mock{background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.08);max-width:700px;width:100%;overflow:hidden;border:1px solid #E8E8E0}
+.wm-bar{background:#F5F5F0;padding:10px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #E8E8E0}
+.wm-dots{display:flex;gap:5px}
+.wm-dot{width:10px;height:10px;border-radius:50%}
+.wm-dot:nth-child(1){background:#FF5F56}
+.wm-dot:nth-child(2){background:#FFBD2E}
+.wm-dot:nth-child(3){background:#27C93F}
+.wm-url{flex:1;background:#fff;border-radius:6px;padding:4px 12px;font-size:11px;color:#888;border:1px solid #E8E8E0;margin:0 8px}
+.wm-body{padding:40px 40px 80px;background:#FDFDFB}
+.wm-body h1{font-size:28px;font-weight:700;color:#0D0D0B;margin-bottom:12px}
+.wm-body p{font-size:15px;color:#666;line-height:1.6;max-width:400px}
+.wm-services{display:flex;gap:12px;margin-top:24px;flex-wrap:wrap}
+.wm-svc{background:#F0FBF7;border:1px solid #C8EEE0;border-radius:10px;padding:12px 16px;font-size:13px;color:#0F6E56;font-weight:500}
+</style>
+</head>
+<body>
+
+<!-- WEBSITE MOCK -->
+<div style="width:100%;max-width:760px">
+  <div style="text-align:center;margin-bottom:20px">
+    <h2 style="font-size:20px;font-weight:700;color:#0D0D0B;margin-bottom:6px">CleanBot Chat Widget — Live Demo</h2>
+    <p style="font-size:13px;color:#888">Click the green button in the bottom right to open the AI chat agent</p>
+  </div>
+
+  <div class="website-mock">
+    <div class="wm-bar">
+      <div class="wm-dots"><div class="wm-dot"></div><div class="wm-dot"></div><div class="wm-dot"></div></div>
+      <div class="wm-url">✦ sparkleclean.com</div>
+    </div>
+    <div class="wm-body">
+      <h1>Professional Cleaning Services</h1>
+      <p>Trusted residential and commercial cleaning across the city. Book online or chat with us now!</p>
+      <div class="wm-services">
+        <div class="wm-svc">🏠 Residential</div>
+        <div class="wm-svc">🏢 Commercial</div>
+        <div class="wm-svc">✨ Deep Clean</div>
+        <div class="wm-svc">📦 Move In/Out</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LAUNCHER -->
+<button id="launcher" onclick="toggleChat()">
+  <div class="launcher-pulse"></div>
+  <span id="launcher-icon">💬</span>
+  <div class="notif-dot" id="notif">1</div>
+</button>
+
+<!-- CHAT WINDOW -->
+<div id="chatwin">
+  <div class="cw-head">
+    <div class="cw-av">🤖</div>
+    <div class="cw-info">
+      <div class="cw-name">CleanBot · Sparkle Clean</div>
+      <div class="cw-status"><div class="cw-dot"></div>Online · replies instantly</div>
+    </div>
+    <button class="cw-close" onclick="toggleChat()">×</button>
+  </div>
+
+  <div class="cw-tabs">
+    <div class="cw-tab on" id="tab-new" onclick="switchScenario('new')">💬 New enquiry</div>
+    <div class="cw-tab" id="tab-quote" onclick="switchScenario('quote')">🔁 Follow-up</div>
+    <div class="cw-tab" id="tab-review" onclick="switchScenario('review')">⭐ Review</div>
+    <div class="cw-tab" id="tab-cancel" onclick="switchScenario('cancel')">🚨 Cancel save</div>
+  </div>
+
+  <div class="cw-msgs" id="msgs"></div>
+  <div id="errBox"></div>
+  <div class="cw-qr" id="qr"></div>
+
+  <div class="cw-input">
+    <input id="inp" type="text" placeholder="Type a message..." onkeydown="if(event.key==='Enter')send()"/>
+    <button class="cw-send" id="sbtn" onclick="send()">↑</button>
+  </div>
+  <div class="cw-footer">Powered by <span>CleanBot AI</span> · Built with Claude</div>
+</div>
+
+<script>
+// ====== CONFIGURATION ======
+const API_KEY = 'YOUR_API_KEY_HERE'; // Replace with your Anthropic API key
+
+const SYSTEMS = {
+  new: `You are CleanBot, a friendly AI chat agent for Sparkle Clean (professional cleaning company).
+A potential customer just opened the chat on the website.
+Qualify: property type, bedrooms, frequency (one-time/recurring). Give price estimate (studio $80, 1-2bed $120-160, 3-4bed $180-240, commercial custom). Offer slots: Friday 10am, Monday 2pm, Wednesday 9am. Confirm booking.
+Be warm, concise — 1-2 sentences per reply. Chat style, not formal.`,
+
+  quote: `You are CleanBot for Sparkle Clean. You are following up with a customer who received a quote 3 days ago for a 3-bedroom deep clean at $165 but hasn't responded.
+Check if they reviewed it, answer questions, offer 10% discount if hesitant, try to close.
+Short, friendly replies — 1-2 sentences max.`,
+
+  review: `You are CleanBot for Sparkle Clean. Following up after a 2-bed apartment was cleaned yesterday by Maria.
+Ask if happy. If yes: request Google review, offer to send link. If unhappy: apologize sincerely, offer free re-clean.
+Warm, genuine. 1-2 sentences.`,
+
+  cancel: `You are CleanBot for Sparkle Clean. A customer is cancelling their appointment via chat.
+Acknowledge kindly, ask why briefly, offer: reschedule / 15% discount / resolve complaint.
+Understanding tone. 1-2 sentences.`
+};
+
+const OPENERS = {
+  new: "Hey! 👋 Welcome to Sparkle Clean. Are you looking to book a clean, or do you have a question for us?",
+  quote: "Hi! I'm following up on the quote we sent over a couple of days ago for your deep clean — did you get a chance to look it over?",
+  review: "Hi there! 😊 Your apartment was cleaned yesterday — we just wanted to check in and see how everything looked?",
+  cancel: "Hi, I can see you're looking to cancel your upcoming appointment. No worries at all — can I ask what happened so I can see if there's anything we can do?"
+};
+
+const QUICK = {
+  new: ["Yes, I want to book a clean","What are your prices?","Do you do commercial?","3-bedroom house, weekly"],
+  quote: ["Yes, I did get it!","Can you remind me of the price?","I'm still deciding","Can I get a discount?"],
+  review: ["It was amazing! 😍","It was okay","Not happy actually","Yes, send me the review link"],
+  cancel: ["Too busy this week","Price is too high","Found someone else","Can we reschedule?"]
+};
+
+let scenario = 'new';
+let history = [];
+let busy = false;
+let opened = false;
+
+const msgsEl = document.getElementById('msgs');
+const qrEl = document.getElementById('qr');
+const inpEl = document.getElementById('inp');
+const sbtnEl = document.getElementById('sbtn');
+const errEl = document.getElementById('errBox');
+const chatwin = document.getElementById('chatwin');
+
+function toggleChat() {
+  opened = !opened;
+  chatwin.classList.toggle('open', opened);
+  document.getElementById('launcher-icon').textContent = opened ? '×' : '💬';
+  document.getElementById('notif').style.display = opened ? 'none' : 'flex';
+  if (opened && history.length === 0) initChat();
+  if (opened) inpEl.focus();
+}
+
+function initChat() {
+  history = [];
+  msgsEl.innerHTML = '';
+  errEl.innerHTML = '';
+  const opener = OPENERS[scenario];
+  setTimeout(() => {
+    addMsg('a', opener);
+    history.push({ role: 'assistant', content: opener });
+    setQR();
+  }, 400);
+}
+
+function switchScenario(s) {
+  scenario = s;
+  document.querySelectorAll('.cw-tab').forEach(t => t.classList.remove('on'));
+  document.getElementById('tab-' + s).classList.add('on');
+  history = [];
+  msgsEl.innerHTML = '';
+  errEl.innerHTML = '';
+  initChat();
+}
+
+function addMsg(role, text) {
+  const d = document.createElement('div');
+  d.className = 'cmsg ' + role;
+  d.innerHTML = role === 'a'
+    ? `<div class="cmsg-av">🤖</div><div class="cbub">${text}</div>`
+    : `<div class="cbub">${text}</div>`;
+  msgsEl.appendChild(d);
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+
+function showTyping() {
+  const d = document.createElement('div');
+  d.className = 'cmsg a'; d.id = 'typing';
+  d.innerHTML = `<div class="cmsg-av">🤖</div><div class="typing-ind"><div class="tdot"></div><div class="tdot"></div><div class="tdot"></div></div>`;
+  msgsEl.appendChild(d); msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+function removeTyping() { const t = document.getElementById('typing'); if (t) t.remove(); }
+
+function setQR() {
+  qrEl.innerHTML = '';
+  (QUICK[scenario] || []).forEach(q => {
+    const c = document.createElement('div');
+    c.className = 'qr-chip'; c.textContent = q;
+    c.onclick = () => { inpEl.value = q; send(); };
+    qrEl.appendChild(c);
+  });
+}
+
+async function send() {
+  const txt = inpEl.value.trim();
+  if (!txt || busy) return;
+
+  if (!API_KEY || API_KEY === 'YOUR_API_KEY_HERE') {
+    errEl.innerHTML = '<div class="cw-err">⚠ Set your API key in the HTML file to enable live AI responses.</div>';
+    return;
+  }
+
+  errEl.innerHTML = '';
+  inpEl.value = '';
+  qrEl.innerHTML = '';
+  addMsg('u', txt);
+  history.push({ role: 'user', content: txt });
+  busy = true; sbtnEl.disabled = true;
+  showTyping();
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 200,
+        system: SYSTEMS[scenario],
+        messages: history
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'API error');
+    const reply = data.content[0]?.text || "Sorry, I didn't catch that!";
+    removeTyping();
+    addMsg('a', reply);
+    history.push({ role: 'assistant', content: reply });
+    setQR();
+  } catch (e) {
+    removeTyping();
+    errEl.innerHTML = `<div class="cw-err">⚠ ${e.message}</div>`;
+  }
+  busy = false; sbtnEl.disabled = false; inpEl.focus();
+}
+</script>
+</body>
+</html>
