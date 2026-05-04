@@ -218,12 +218,16 @@ body {
 
 /* ── MESSAGES ────────────────────────────────────────────── */
 .cb-messages {
-  flex: 1; overflow-y: scroll; overflow-x: hidden;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px;
-  display: flex; flex-direction: column; gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   scroll-behavior: smooth;
   min-height: 0;
-  max-height: 100%;
+  height: 0;
 }
 
 /* Custom scrollbar */
