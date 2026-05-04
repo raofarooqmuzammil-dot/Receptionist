@@ -1,0 +1,2283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CleanBot — Never miss a cleaning job again</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+  /*EDITMODE-BEGIN*/ /*EDITMODE-END*/
+  :root {
+    --accent: #06b6d4;
+    --accent-2: #22d3ee;
+    --accent-glow: rgba(6, 182, 212, 0.35);
+    --bg: #07090d;
+    --bg-2: #0b0f17;
+    --bg-3: #0f1420;
+    --surface: #11172380;
+    --border: #1f2937;
+    --border-soft: #1a2230;
+    --text: #e7edf5;
+    --text-2: #98a2b3;
+    --text-3: #6b7280;
+    --highlight-tier: 1; /* 0=starter, 1=pro, 2=enterprise */
+  }
+  [data-theme="light"] {
+    --bg: #fafbfc;
+    --bg-2: #ffffff;
+    --bg-3: #f3f5f8;
+    --surface: #ffffffcc;
+    --border: #e5e7eb;
+    --border-soft: #eef0f3;
+    --text: #0b1220;
+    --text-2: #4b5563;
+    --text-3: #9ca3af;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Geist', -apple-system, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  .mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+  .serif { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; }
+
+  /* ---------- Background fx ---------- */
+  .bg-fx {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(1200px 800px at 80% -10%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 60%),
+      radial-gradient(900px 700px at -10% 30%, color-mix(in oklab, var(--accent) 10%, transparent), transparent 55%),
+      radial-gradient(700px 500px at 50% 100%, color-mix(in oklab, var(--accent) 8%, transparent), transparent 60%);
+  }
+  .grid-fx {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .35;
+    background-image:
+      linear-gradient(to right, color-mix(in oklab, var(--text) 6%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, var(--text) 6%, transparent) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000 30%, transparent 80%);
+  }
+
+  main { position: relative; z-index: 1; }
+
+  /* ---------- Layout primitives ---------- */
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'Geist Mono', monospace; font-size: 12px;
+    color: var(--text-2); text-transform: uppercase; letter-spacing: 0.12em;
+    padding: 6px 12px; border: 1px solid var(--border);
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--bg-2) 60%, transparent);
+    backdrop-filter: blur(8px);
+  }
+  .eyebrow .dot {
+    width: 6px; height: 6px; border-radius: 99px; background: var(--accent);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+  h1, h2, h3 { letter-spacing: -0.02em; margin: 0; }
+  h1 { font-size: clamp(44px, 6.4vw, 88px); font-weight: 600; line-height: 0.98; }
+  h2 { font-size: clamp(34px, 4.4vw, 56px); font-weight: 600; line-height: 1.04; }
+  h3 { font-size: 20px; font-weight: 500; }
+  p { color: var(--text-2); line-height: 1.55; }
+  .grad {
+    background: linear-gradient(110deg, var(--text) 0%, var(--text) 35%, var(--accent-2) 65%, var(--accent) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-family: inherit; font-size: 15px; font-weight: 500;
+    padding: 13px 20px; border-radius: 12px;
+    border: 1px solid transparent; cursor: pointer; text-decoration: none;
+    transition: transform .15s ease, box-shadow .2s ease, background .2s ease;
+    line-height: 1; white-space: nowrap;
+  }
+  .btn-primary {
+    color: #04141a;
+    background: linear-gradient(180deg, var(--accent-2) 0%, var(--accent) 100%);
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--accent) 50%, transparent) inset,
+      0 8px 24px -4px var(--accent-glow),
+      0 0 40px -8px var(--accent-glow);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px var(--accent) inset, 0 14px 36px -4px var(--accent-glow), 0 0 60px -8px var(--accent-glow); }
+  .btn-ghost {
+    color: var(--text); background: transparent; border-color: var(--border);
+  }
+  .btn-ghost:hover { background: color-mix(in oklab, var(--accent) 8%, transparent); border-color: color-mix(in oklab, var(--accent) 30%, var(--border)); }
+  .btn-lg { padding: 16px 26px; font-size: 16px; border-radius: 14px; }
+  .btn .arrow { transition: transform .2s ease; }
+  .btn:hover .arrow { transform: translateX(3px); }
+
+  /* ---------- Nav ---------- */
+  nav.top {
+    position: sticky; top: 0; z-index: 50;
+    background: color-mix(in oklab, var(--bg) 70%, transparent);
+    backdrop-filter: blur(16px) saturate(140%);
+    border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  }
+  nav.top .row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 0;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 17px; color: var(--text); text-decoration: none; }
+  .logo-mark {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent-2), var(--accent));
+    display: grid; place-items: center; color: #04141a; font-weight: 800;
+    box-shadow: 0 0 24px -4px var(--accent-glow), 0 0 0 1px color-mix(in oklab, var(--accent) 60%, transparent) inset;
+  }
+  .nav-links { display: flex; gap: 28px; }
+  .nav-links a { color: var(--text-2); text-decoration: none; font-size: 14px; }
+  .nav-links a:hover { color: var(--text); }
+  @media (max-width: 760px) { .nav-links { display: none; } }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: 88px 0 64px; }
+  .hero-grid {
+    display: grid; grid-template-columns: 1.1fr .95fr; gap: 56px; align-items: center;
+  }
+  @media (max-width: 980px) { .hero-grid { grid-template-columns: 1fr; gap: 40px; } }
+  .hero h1 .em { color: var(--accent-2); }
+  .hero p.lede { font-size: 19px; max-width: 540px; margin: 22px 0 30px; color: var(--text-2); }
+  .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .trust-row {
+    margin-top: 36px; display: flex; align-items: center; gap: 18px; color: var(--text-3); font-size: 13px;
+  }
+  .avatars { display: flex; }
+  .avatars span {
+    width: 28px; height: 28px; border-radius: 99px; border: 2px solid var(--bg);
+    margin-left: -8px; background: linear-gradient(135deg, #475569, #1e293b);
+    display: grid; place-items: center; font-size: 11px; color: #cbd5e1; font-weight: 600;
+  }
+  .avatars span:first-child { margin-left: 0; }
+  .stars { color: #fbbf24; letter-spacing: 2px; }
+
+  /* ---------- Chat demo ---------- */
+  .chat-card {
+    position: relative;
+    background: linear-gradient(180deg, color-mix(in oklab, var(--bg-3) 70%, transparent), color-mix(in oklab, var(--bg-2) 70%, transparent));
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 18px;
+    box-shadow:
+      0 30px 80px -20px rgba(0,0,0,0.5),
+      0 0 0 1px color-mix(in oklab, var(--accent) 8%, transparent),
+      inset 0 1px 0 color-mix(in oklab, var(--text) 8%, transparent);
+    backdrop-filter: blur(12px);
+  }
+  .chat-card::before {
+    content: ""; position: absolute; inset: -1px; border-radius: 24px; padding: 1px;
+    background: linear-gradient(135deg, color-mix(in oklab, var(--accent) 50%, transparent), transparent 40%, color-mix(in oklab, var(--accent) 30%, transparent));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
+  }
+  .chat-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px 14px; border-bottom: 1px solid var(--border-soft);
+  }
+  .chat-head .avatar {
+    width: 34px; height: 34px; border-radius: 99px;
+    background: linear-gradient(135deg, var(--accent-2), var(--accent));
+    display: grid; place-items: center; color: #04141a; font-weight: 700;
+    box-shadow: 0 0 16px -2px var(--accent-glow);
+  }
+  .chat-head .name { font-weight: 600; font-size: 14px; }
+  .chat-head .status { font-size: 12px; color: var(--text-3); display: flex; align-items: center; gap: 6px; }
+  .chat-head .status::before {
+    content: ""; width: 6px; height: 6px; border-radius: 99px; background: #22c55e;
+    box-shadow: 0 0 8px #22c55e;
+  }
+  .chat-body {
+    padding: 16px 4px 4px;
+    display: flex; flex-direction: column; gap: 10px;
+    min-height: 360px;
+  }
+  .bubble {
+    max-width: 80%; padding: 10px 14px; border-radius: 14px; font-size: 14px;
+    line-height: 1.4; opacity: 0; transform: translateY(8px);
+    animation: bubble-in .5s cubic-bezier(.2,.7,.2,1) forwards;
+  }
+  .bubble.bot { background: color-mix(in oklab, var(--bg-3) 80%, transparent); border: 1px solid var(--border-soft); align-self: flex-start; }
+  .bubble.user { background: linear-gradient(180deg, var(--accent-2), var(--accent)); color: #04141a; align-self: flex-end; font-weight: 500; }
+  .bubble.b1 { animation-delay: .2s; }
+  .bubble.b2 { animation-delay: 1.0s; }
+  .bubble.b3 { animation-delay: 1.8s; }
+  .bubble.b4 { animation-delay: 2.6s; }
+  .bubble.b5 { animation-delay: 3.4s; }
+  .bubble.b6 { animation-delay: 4.2s; }
+  @keyframes bubble-in { to { opacity: 1; transform: translateY(0); } }
+  .quick {
+    display: flex; gap: 8px; flex-wrap: wrap; padding: 6px 0 10px;
+    opacity: 0; animation: bubble-in .4s ease 4.8s forwards;
+  }
+  .quick button {
+    background: color-mix(in oklab, var(--accent) 8%, transparent);
+    color: var(--accent-2); border: 1px solid color-mix(in oklab, var(--accent) 30%, transparent);
+    padding: 8px 12px; border-radius: 99px; font-size: 13px; cursor: pointer; font-family: inherit;
+  }
+  .typing {
+    display: inline-flex; gap: 3px; padding: 12px 14px;
+    background: color-mix(in oklab, var(--bg-3) 80%, transparent);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px; align-self: flex-start;
+    opacity: 0; animation: bubble-in .3s ease 0s forwards, fade-out .3s ease 1.0s forwards;
+  }
+  @keyframes fade-out { to { opacity: 0; height: 0; padding: 0; margin: 0; } }
+  .typing i { width: 6px; height: 6px; background: var(--text-3); border-radius: 99px; display: inline-block; animation: bounce 1s infinite; }
+  .typing i:nth-child(2){ animation-delay: .15s; }
+  .typing i:nth-child(3){ animation-delay: .3s; }
+  @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: .4 } 30% { transform: translateY(-3px); opacity: 1 } }
+
+  .chat-floats {
+    position: absolute; pointer-events: none;
+    font-family: 'Geist Mono', monospace; font-size: 11px;
+    color: var(--accent-2);
+    background: color-mix(in oklab, var(--bg) 80%, transparent);
+    border: 1px solid color-mix(in oklab, var(--accent) 30%, var(--border));
+    padding: 6px 10px; border-radius: 8px; backdrop-filter: blur(8px);
+    box-shadow: 0 0 24px -4px var(--accent-glow);
+  }
+  .float-1 { top: -16px; right: 30px; }
+  .float-2 { bottom: -14px; left: 24px; }
+
+  /* ---------- Section heading ---------- */
+  section.s { padding: 96px 0; position: relative; }
+  .s-head { text-align: center; max-width: 720px; margin: 0 auto 56px; }
+  .s-head .eyebrow { margin-bottom: 18px; }
+  .s-head p { font-size: 17px; margin-top: 14px; }
+
+  /* ---------- Pain section ---------- */
+  .pain-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  }
+  @media (max-width: 880px) { .pain-grid { grid-template-columns: 1fr; } }
+  .pain-card {
+    background: linear-gradient(180deg, color-mix(in oklab, var(--bg-3) 60%, transparent), transparent);
+    border: 1px solid var(--border);
+    border-radius: 20px; padding: 28px;
+    position: relative; overflow: hidden;
+  }
+  .pain-card .num {
+    font-family: 'Instrument Serif', serif; font-style: italic;
+    position: absolute; top: 14px; right: 22px; font-size: 70px; color: color-mix(in oklab, var(--text) 6%, transparent);
+    line-height: 1;
+  }
+  .pain-card .stat {
+    font-family: 'Geist Mono', monospace; font-size: 13px; color: #f97316;
+    background: color-mix(in oklab, #f97316 10%, transparent);
+    border: 1px solid color-mix(in oklab, #f97316 25%, transparent);
+    padding: 4px 10px; border-radius: 99px; display: inline-block; margin-bottom: 18px;
+  }
+  .pain-card h3 { margin-bottom: 8px; font-size: 22px; }
+  .pain-card p { font-size: 14px; }
+
+  .pain-cta-row {
+    margin-top: 40px; text-align: center;
+    padding: 28px; border: 1px dashed color-mix(in oklab, var(--accent) 30%, var(--border));
+    border-radius: 20px; background: color-mix(in oklab, var(--accent) 4%, transparent);
+  }
+  .pain-cta-row .label { font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--accent-2); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 8px; }
+  .pain-cta-row .big { font-size: 26px; font-weight: 500; margin-bottom: 14px; }
+
+  /* ---------- ROI calculator (centerpiece) ---------- */
+  .roi-section { padding: 100px 0 110px; }
+  .roi-card {
+    background:
+      radial-gradient(800px 400px at 80% 0%, color-mix(in oklab, var(--accent) 15%, transparent), transparent 60%),
+      linear-gradient(180deg, var(--bg-3), var(--bg-2));
+    border: 1px solid color-mix(in oklab, var(--accent) 18%, var(--border));
+    border-radius: 32px; padding: 48px;
+    box-shadow:
+      0 60px 120px -40px rgba(0,0,0,.7),
+      0 0 0 1px color-mix(in oklab, var(--accent) 6%, transparent),
+      inset 0 1px 0 color-mix(in oklab, var(--text) 6%, transparent);
+    position: relative; overflow: hidden;
+  }
+  .roi-card::after {
+    content: ""; position: absolute; top: -120px; right: -120px;
+    width: 320px; height: 320px; border-radius: 99px;
+    background: radial-gradient(circle, var(--accent-glow), transparent 70%);
+    pointer-events: none;
+  }
+  .roi-grid {
+    display: grid; grid-template-columns: 1.1fr 1fr; gap: 56px; align-items: stretch; position: relative;
+  }
+  @media (max-width: 920px) { .roi-grid { grid-template-columns: 1fr; gap: 32px; } }
+
+  .slider-block { display: flex; flex-direction: column; gap: 24px; }
+  .slider-row { }
+  .slider-label { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .slider-label .lbl { color: var(--text-2); font-size: 14px; }
+  .slider-label .val { font-family: 'Geist Mono', monospace; color: var(--accent-2); font-size: 18px; font-weight: 500; }
+  input[type=range] {
+    -webkit-appearance: none; appearance: none; width: 100%; height: 6px;
+    background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--p, 50%), color-mix(in oklab, var(--text) 12%, transparent) var(--p, 50%));
+    border-radius: 99px; outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 22px; height: 22px;
+    border-radius: 99px; background: var(--accent-2); cursor: pointer;
+    border: 3px solid var(--bg-2);
+    box-shadow: 0 0 0 1px var(--accent), 0 0 20px var(--accent-glow);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 22px; height: 22px; border-radius: 99px; background: var(--accent-2); cursor: pointer;
+    border: 3px solid var(--bg-2);
+    box-shadow: 0 0 0 1px var(--accent), 0 0 20px var(--accent-glow);
+  }
+  .roi-readout {
+    background: linear-gradient(180deg, var(--bg), var(--bg-2));
+    border: 1px solid var(--border);
+    border-radius: 20px; padding: 28px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .roi-row { display: flex; justify-content: space-between; align-items: baseline; }
+  .roi-row .k { color: var(--text-2); font-size: 14px; }
+  .roi-row .v { font-family: 'Geist Mono', monospace; font-size: 18px; }
+  .roi-row .v.minus { color: #ef4444; }
+  .roi-row .v.plus { color: #22c55e; }
+  .roi-divider { height: 1px; background: var(--border-soft); }
+  .roi-hero {
+    text-align: center; padding: 18px 0 6px;
+  }
+  .roi-hero .label {
+    font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--accent-2);
+    text-transform: uppercase; letter-spacing: 0.12em;
+  }
+  .roi-hero .num {
+    font-size: 56px; font-weight: 600; letter-spacing: -0.03em; line-height: 1;
+    margin: 8px 0; color: var(--text);
+    background: linear-gradient(180deg, var(--text), color-mix(in oklab, var(--accent-2) 80%, var(--text)));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .roi-hero .sub { font-size: 13px; color: var(--text-3); }
+  .currency-toggle {
+    display: inline-flex; gap: 2px; padding: 3px;
+    border: 1px solid var(--border); border-radius: 99px;
+    background: color-mix(in oklab, var(--bg) 60%, transparent);
+  }
+  .currency-toggle button {
+    background: transparent; color: var(--text-2); border: 0; cursor: pointer;
+    padding: 6px 14px; border-radius: 99px; font-size: 12px; font-family: 'Geist Mono', monospace;
+  }
+  .currency-toggle button.on { background: var(--accent); color: #04141a; }
+
+  /* ---------- How it works ---------- */
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; counter-reset: stp; }
+  @media (max-width: 880px) { .steps { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 520px) { .steps { grid-template-columns: 1fr; } }
+  .step {
+    background: color-mix(in oklab, var(--bg-3) 60%, transparent);
+    border: 1px solid var(--border); border-radius: 20px; padding: 26px;
+    position: relative; counter-increment: stp;
+  }
+  .step .num {
+    font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--accent-2);
+    background: color-mix(in oklab, var(--accent) 10%, transparent);
+    border: 1px solid color-mix(in oklab, var(--accent) 30%, transparent);
+    padding: 4px 10px; border-radius: 99px; display: inline-block; margin-bottom: 18px;
+  }
+  .step h3 { font-size: 18px; margin-bottom: 6px; }
+  .step p { font-size: 14px; }
+  .step .icon {
+    margin-top: 18px; height: 90px; border-radius: 14px;
+    background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 12%, transparent), color-mix(in oklab, var(--accent) 4%, transparent));
+    border: 1px solid color-mix(in oklab, var(--accent) 18%, transparent);
+    display: grid; place-items: center; color: var(--accent-2);
+    font-family: 'Geist Mono', monospace;
+  }
+
+  /* ---------- Pricing ---------- */
+  .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 880px) { .pricing-grid { grid-template-columns: 1fr; } }
+  .price-card {
+    background: linear-gradient(180deg, color-mix(in oklab, var(--bg-3) 70%, transparent), transparent);
+    border: 1px solid var(--border); border-radius: 24px; padding: 32px;
+    display: flex; flex-direction: column; gap: 18px; position: relative;
+  }
+  .price-card.popular {
+    border-color: color-mix(in oklab, var(--accent) 50%, transparent);
+    background:
+      radial-gradient(400px 200px at 50% 0%, color-mix(in oklab, var(--accent) 18%, transparent), transparent 60%),
+      linear-gradient(180deg, var(--bg-3), var(--bg-2));
+    box-shadow: 0 30px 80px -30px var(--accent-glow), 0 0 0 1px color-mix(in oklab, var(--accent) 30%, transparent);
+    transform: translateY(-8px);
+  }
+  .price-card .badge {
+    position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+    font-family: 'Geist Mono', monospace; font-size: 11px;
+    padding: 5px 12px; border-radius: 99px;
+    background: linear-gradient(180deg, var(--accent-2), var(--accent));
+    color: #04141a; font-weight: 600; letter-spacing: 0.06em;
+  }
+  .price-card h3 { font-size: 18px; }
+  .price-card .price {
+    font-size: 48px; font-weight: 600; letter-spacing: -0.02em; line-height: 1;
+  }
+  .price-card .price small { font-size: 14px; color: var(--text-3); font-weight: 400; }
+  .price-card .desc { font-size: 14px; color: var(--text-2); }
+  .price-card ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+  .price-card li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: var(--text-2); }
+  .price-card li svg { flex-shrink: 0; margin-top: 2px; }
+  .price-card .btn { justify-content: center; }
+
+  /* ---------- Testimonials ---------- */
+  .quote-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 880px) { .quote-grid { grid-template-columns: 1fr; } }
+  .quote {
+    background: color-mix(in oklab, var(--bg-3) 60%, transparent);
+    border: 1px solid var(--border); border-radius: 20px; padding: 28px;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .quote .stars { font-size: 14px; }
+  .quote q {
+    font-family: 'Instrument Serif', serif; font-style: italic; font-size: 22px;
+    line-height: 1.3; color: var(--text); quotes: none;
+  }
+  .quote q::before, .quote q::after { content: ''; }
+  .quote .who { display: flex; align-items: center; gap: 12px; margin-top: auto; }
+  .quote .who .av {
+    width: 38px; height: 38px; border-radius: 99px;
+    background: linear-gradient(135deg, var(--accent-2), var(--accent));
+    display: grid; place-items: center; color: #04141a; font-weight: 700;
+  }
+  .quote .who .name { font-size: 14px; font-weight: 500; }
+  .quote .who .meta { font-size: 12px; color: var(--text-3); }
+  .quote .flag { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--text-3); margin-left: auto; }
+
+  /* ---------- Logos / proof bar ---------- */
+  .proof-bar {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;
+    padding: 28px 0; margin-top: 60px;
+    border-top: 1px solid var(--border-soft);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  @media (max-width: 720px) { .proof-bar { grid-template-columns: 1fr 1fr; } }
+  .proof-item { text-align: center; }
+  .proof-item .num { font-size: 32px; font-weight: 600; letter-spacing: -0.02em; }
+  .proof-item .lbl { font-size: 12px; color: var(--text-3); font-family: 'Geist Mono', monospace; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px; }
+
+  /* ---------- FAQ ---------- */
+  .faq { max-width: 820px; margin: 0 auto; }
+  .faq details {
+    border: 1px solid var(--border); border-radius: 14px; padding: 0;
+    margin-bottom: 10px; background: color-mix(in oklab, var(--bg-3) 50%, transparent);
+    overflow: hidden;
+  }
+  .faq details[open] { border-color: color-mix(in oklab, var(--accent) 30%, var(--border)); }
+  .faq summary {
+    list-style: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px; font-weight: 500; font-size: 16px;
+  }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary .plus {
+    width: 20px; height: 20px; border-radius: 99px;
+    border: 1px solid var(--border); display: grid; place-items: center; flex-shrink: 0;
+    transition: transform .2s ease, background .2s ease;
+    color: var(--text-2); font-size: 14px;
+  }
+  .faq details[open] summary .plus { transform: rotate(45deg); background: var(--accent); color: #04141a; border-color: var(--accent); }
+  .faq .ans { padding: 0 22px 22px; color: var(--text-2); font-size: 15px; line-height: 1.6; }
+
+  /* ---------- Final CTA ---------- */
+  .final-cta {
+    margin-top: 80px;
+    background:
+      radial-gradient(600px 300px at 30% 50%, color-mix(in oklab, var(--accent) 18%, transparent), transparent 60%),
+      radial-gradient(600px 300px at 70% 50%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 60%),
+      linear-gradient(180deg, var(--bg-3), var(--bg-2));
+    border: 1px solid color-mix(in oklab, var(--accent) 25%, var(--border));
+    border-radius: 32px; padding: 64px 32px; text-align: center;
+    box-shadow: 0 40px 100px -30px rgba(0,0,0,.6), inset 0 1px 0 color-mix(in oklab, var(--text) 8%, transparent);
+    position: relative; overflow: hidden;
+  }
+  .final-cta::before {
+    content: ""; position: absolute; inset: 0;
+    background:
+      linear-gradient(to right, color-mix(in oklab, var(--text) 4%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, var(--text) 4%, transparent) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: radial-gradient(ellipse 70% 80% at 50% 50%, #000 30%, transparent 80%);
+    pointer-events: none; opacity: .6;
+  }
+  .final-cta > * { position: relative; }
+  .final-cta h2 { font-size: clamp(36px, 5vw, 60px); }
+  .final-cta p { max-width: 540px; margin: 18px auto 28px; font-size: 17px; }
+  .final-cta .row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+  /* ---------- Footer ---------- */
+  footer {
+    margin-top: 64px; padding: 48px 0 64px;
+    border-top: 1px solid var(--border-soft);
+    color: var(--text-3); font-size: 13px;
+  }
+  footer .row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+  footer .links { display: flex; gap: 22px; }
+  footer .links a { color: var(--text-3); text-decoration: none; }
+  footer .links a:hover { color: var(--text); }
+
+  /* ---------- Sticky bottom CTA (mobile) ---------- */
+  .sticky-cta {
+    position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 40;
+    background: color-mix(in oklab, var(--bg-2) 90%, transparent);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border); border-radius: 16px;
+    padding: 12px; display: none; align-items: center; gap: 12px;
+    box-shadow: 0 20px 40px -10px rgba(0,0,0,.6);
+  }
+  .sticky-cta .lbl { font-size: 13px; color: var(--text-2); flex: 1; }
+  @media (max-width: 760px) { .sticky-cta { display: flex; } }
+
+  /* ---------- Tweaks panel customization ---------- */
+  .tw-toggle-row { display: flex; gap: 6px; }
+  .tw-toggle-row button {
+    flex: 1; padding: 8px 10px; border-radius: 8px;
+    border: 1px solid var(--border); background: transparent; color: var(--text-2);
+    font-family: inherit; font-size: 12px; cursor: pointer;
+  }
+  .tw-toggle-row button.on { background: var(--accent); color: #04141a; border-color: var(--accent); }
+  .tw-color-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tw-color-row button {
+    width: 32px; height: 32px; border-radius: 99px; cursor: pointer; border: 2px solid transparent;
+  }
+  .tw-color-row button.on { border-color: var(--text); transform: scale(1.1); }
+
+  /* ===== ONBOARDING (scoped) ===== */
+
+  /*EDITMODE-BEGIN*/ /*EDITMODE-END*/
+  :root{
+    --accent: #06b6d4;
+    --accent-2: #22d3ee;
+    --accent-glow: rgba(6, 182, 212, 0.35);
+    --bg: #07090d;
+    --bg-2: #0b0f17;
+    --bg-3: #0f1420;
+    --surface: #11172380;
+    --border: #1f2937;
+    --border-soft: #1a2230;
+    --text: #e7edf5;
+    --text-2: #98a2b3;
+    --text-3: #6b7280;
+    --bot-color: #06b6d4;
+  }
+  #view-onboarding [data-theme="light"]{
+    --bg: #fafbfc;
+    --bg-2: #ffffff;
+    --bg-3: #f3f5f8;
+    --border: #e5e7eb;
+    --border-soft: #eef0f3;
+    --text: #0b1220;
+    --text-2: #4b5563;
+    --text-3: #9ca3af;
+  }
+  #view-onboarding *{ box-sizing: border-box; }
+  html, #view-onboarding{ margin: 0; padding: 0; min-height: 100%; }
+  #view-onboarding{
+    font-family: 'Geist', -apple-system, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+  #view-onboarding .mono{ font-family: 'Geist Mono', ui-monospace, monospace; }
+  #view-onboarding .serif{ font-family: 'Instrument Serif', serif; font-style: italic; }
+
+  #view-onboarding .bg-fx{
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(1100px 700px at 90% -10%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 60%),
+      radial-gradient(900px 700px at -10% 100%, color-mix(in oklab, var(--accent) 10%, transparent), transparent 55%);
+  }
+  #view-onboarding .grid-fx{
+    position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .25;
+    background-image:
+      linear-gradient(to right, color-mix(in oklab, var(--text) 6%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, var(--text) 6%, transparent) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000 30%, transparent 80%);
+  }
+
+  /* ---------- Top nav ---------- */
+  #view-onboarding nav.top{
+    position: relative; z-index: 10;
+    border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    background: color-mix(in oklab, var(--bg) 70%, transparent);
+    backdrop-filter: blur(16px);
+  }
+  #view-onboarding nav.top .row{
+    max-width: 1280px; margin: 0 auto; padding: 14px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  #view-onboarding .logo{ display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 17px; color: var(--text); text-decoration: none; }
+  #view-onboarding .logo-mark{
+    width: 28px; height: 28px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent-2), var(--accent));
+    display: grid; place-items: center; color: #04141a; font-weight: 800;
+    box-shadow: 0 0 24px -4px var(--accent-glow), 0 0 0 1px color-mix(in oklab, var(--accent) 60%, transparent) inset;
+  }
+  #view-onboarding nav.top .help{ color: var(--text-2); text-decoration: none; font-size: 14px; }
+  #view-onboarding nav.top .help:hover{ color: var(--text); }
+
+  /* ---------- Layout ---------- */
+  #view-onboarding .shell{ position: relative; z-index: 1; }
+  #view-onboarding .grid{
+    display: grid; grid-template-columns: 1fr 460px;
+    min-height: calc(100vh - 60px);
+  }
+  @media (max-width: 980px) { #view-onboarding .grid{ grid-template-columns: 1fr; } #view-onboarding .preview-col{ display: none; } }
+
+  /* ---------- Form column ---------- */
+  #view-onboarding .form-col{ padding: 56px 56px 80px; max-width: 760px; margin: 0 auto; width: 100%; }
+  @media (max-width: 720px) { #view-onboarding .form-col{ padding: 32px 20px 100px; } }
+
+  #view-onboarding .progress-wrap{ margin-bottom: 36px; }
+  #view-onboarding .progress-meta{
+    display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px;
+  }
+  #view-onboarding .progress-meta .step-num{
+    font-family: 'Geist Mono', monospace; color: var(--accent-2);
+    font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+  }
+  #view-onboarding .progress-meta .pct{
+    font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--text-3);
+  }
+  #view-onboarding .progress-bar{
+    height: 4px; border-radius: 99px;
+    background: color-mix(in oklab, var(--text) 10%, transparent);
+    overflow: hidden; position: relative;
+  }
+  #view-onboarding .progress-bar .fill{
+    position: absolute; inset: 0; transform-origin: left;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    box-shadow: 0 0 12px var(--accent-glow);
+    transition: transform .5s cubic-bezier(.2,.7,.2,1);
+  }
+  #view-onboarding .stepper{
+    display: flex; gap: 6px; margin-top: 14px;
+  }
+  #view-onboarding .stepper .pip{
+    flex: 1; height: 6px; border-radius: 99px;
+    background: color-mix(in oklab, var(--text) 8%, transparent);
+    transition: background .3s ease;
+    cursor: pointer;
+  }
+  #view-onboarding .stepper .pip.done{ background: color-mix(in oklab, var(--accent) 70%, transparent); }
+  #view-onboarding .stepper .pip.current{ background: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+
+  #view-onboarding .step-head{ margin-bottom: 32px; }
+  #view-onboarding .step-head .eyebrow{
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'Geist Mono', monospace; font-size: 12px;
+    color: var(--text-2); text-transform: uppercase; letter-spacing: 0.1em;
+    padding: 5px 12px; border: 1px solid var(--border); border-radius: 99px;
+    margin-bottom: 16px;
+  }
+  #view-onboarding .step-head .eyebrow .dot{
+    width: 6px; height: 6px; border-radius: 99px; background: var(--accent);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  #view-onboarding .step-head h1{
+    font-size: 38px; line-height: 1.05; letter-spacing: -0.02em; font-weight: 600;
+    margin: 0 0 10px;
+  }
+  #view-onboarding .step-head p{ color: var(--text-2); font-size: 16px; margin: 0; max-width: 560px; }
+
+  /* ---------- Form fields ---------- */
+  #view-onboarding .fields{ display: flex; flex-direction: column; gap: 18px; }
+  #view-onboarding .field{ display: flex; flex-direction: column; gap: 8px; }
+  #view-onboarding .field.row2{ display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 600px) { #view-onboarding .field.row2{ grid-template-columns: 1fr; } }
+  #view-onboarding label{ font-size: 13px; color: var(--text-2); font-weight: 500; }
+  #view-onboarding label .req{ color: var(--accent-2); }
+  #view-onboarding input[type=text], #view-onboarding input[type=email], #view-onboarding input[type=tel], #view-onboarding select, #view-onboarding textarea{
+    width: 100%;
+    padding: 14px 16px;
+    background: color-mix(in oklab, var(--bg-3) 60%, transparent);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-family: inherit; font-size: 15px;
+    transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+  }
+  #view-onboarding input:focus, #view-onboarding select:focus, #view-onboarding textarea:focus{
+    outline: none;
+    border-color: color-mix(in oklab, var(--accent) 50%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 20%, transparent);
+    background: var(--bg-2);
+  }
+  #view-onboarding ::placeholder{ color: var(--text-3); }
+  #view-onboarding textarea{ resize: vertical; min-height: 80px; }
+
+  /* ---------- Plan cards ---------- */
+  #view-onboarding .plan-grid{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  @media (max-width: 760px) { #view-onboarding .plan-grid{ grid-template-columns: 1fr; } }
+  #view-onboarding .plan{
+    border: 1px solid var(--border); border-radius: 16px; padding: 20px;
+    cursor: pointer; transition: all .2s ease; position: relative;
+    background: color-mix(in oklab, var(--bg-3) 50%, transparent);
+  }
+  #view-onboarding .plan:hover{ border-color: color-mix(in oklab, var(--accent) 30%, var(--border)); }
+  #view-onboarding .plan.selected{
+    border-color: var(--accent);
+    background: color-mix(in oklab, var(--accent) 8%, var(--bg-3));
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 18%, transparent);
+  }
+  #view-onboarding .plan .name{ font-weight: 600; font-size: 16px; }
+  #view-onboarding .plan .price{ font-size: 30px; font-weight: 600; letter-spacing: -0.02em; margin: 8px 0 4px; }
+  #view-onboarding .plan .price small{ font-size: 13px; color: var(--text-3); font-weight: 400; }
+  #view-onboarding .plan .desc{ font-size: 13px; color: var(--text-2); margin-bottom: 14px; line-height: 1.4; }
+  #view-onboarding .plan ul{ list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+  #view-onboarding .plan li{ font-size: 12px; color: var(--text-2); display: flex; align-items: flex-start; gap: 6px; }
+  #view-onboarding .plan li::before{ content: "✓"; color: var(--accent-2); font-weight: 700; }
+  #view-onboarding .plan .pop{
+    position: absolute; top: -10px; right: 14px;
+    font-family: 'Geist Mono', monospace; font-size: 10px;
+    padding: 4px 10px; border-radius: 99px;
+    background: linear-gradient(180deg, var(--accent-2), var(--accent));
+    color: #04141a; font-weight: 600; letter-spacing: 0.05em;
+  }
+
+  /* ---------- Services table ---------- */
+  #view-onboarding .svc-table{
+    border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+    background: color-mix(in oklab, var(--bg-3) 40%, transparent);
+  }
+  #view-onboarding .svc-row{
+    display: grid; grid-template-columns: 32px 2fr 1fr 1.2fr 32px;
+    align-items: center; gap: 12px; padding: 12px 14px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  #view-onboarding .svc-row:last-child{ border-bottom: 0; }
+  #view-onboarding .svc-row.head{
+    background: color-mix(in oklab, var(--bg-2) 60%, transparent);
+    font-size: 12px; color: var(--text-3); font-family: 'Geist Mono', monospace;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  #view-onboarding .svc-row .check{
+    width: 22px; height: 22px; border-radius: 6px;
+    border: 1.5px solid var(--border); display: grid; place-items: center;
+    cursor: pointer; transition: all .15s ease;
+  }
+  #view-onboarding .svc-row.on .check{
+    background: var(--accent); border-color: var(--accent); color: #04141a;
+  }
+  #view-onboarding .svc-row input{ padding: 8px 12px; font-size: 14px; border-radius: 8px; }
+  #view-onboarding .svc-row .name{ font-size: 14px; font-weight: 500; }
+  #view-onboarding .svc-row .del{
+    width: 26px; height: 26px; border-radius: 6px; border: 0;
+    background: transparent; color: var(--text-3); cursor: pointer;
+  }
+  #view-onboarding .svc-row .del:hover{ background: color-mix(in oklab, #ef4444 20%, transparent); color: #ef4444; }
+  #view-onboarding .svc-add{
+    padding: 12px 14px; text-align: center;
+    color: var(--accent-2); font-size: 13px; cursor: pointer;
+    background: transparent; border: 0; width: 100%; font-family: inherit;
+  }
+  #view-onboarding .svc-add:hover{ background: color-mix(in oklab, var(--accent) 6%, transparent); }
+
+  /* ---------- Availability ---------- */
+  #view-onboarding .day-row{
+    display: grid; grid-template-columns: 110px 1fr 1fr;
+    gap: 10px; align-items: center;
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+    margin-bottom: 8px;
+    background: color-mix(in oklab, var(--bg-3) 40%, transparent);
+  }
+  #view-onboarding .day-row.off{ opacity: 0.4; }
+  #view-onboarding .day-row .day-toggle{
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+  }
+  #view-onboarding .day-row .switch{
+    width: 32px; height: 18px; border-radius: 99px;
+    background: color-mix(in oklab, var(--text) 15%, transparent);
+    position: relative; transition: background .2s ease;
+    flex-shrink: 0;
+  }
+  #view-onboarding .day-row .switch::after{
+    content: ""; position: absolute; top: 2px; left: 2px;
+    width: 14px; height: 14px; border-radius: 99px; background: white;
+    transition: left .2s ease;
+  }
+  #view-onboarding .day-row.on .switch{ background: var(--accent); }
+  #view-onboarding .day-row.on .switch::after{ left: 16px; }
+  #view-onboarding .day-row .name{ font-weight: 500; font-size: 14px; }
+  #view-onboarding .day-row input[type=time]{
+    width: 100%; padding: 8px 12px; font-size: 13px; border-radius: 8px;
+    background: color-mix(in oklab, var(--bg) 70%, transparent);
+    border: 1px solid var(--border); color: var(--text);
+    color-scheme: dark;
+    font-family: inherit;
+  }
+  #view-onboarding [data-theme="light"] .day-row input[type=time]{ color-scheme: light; }
+
+  #view-onboarding .surcharge-grid{
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  }
+  @media (max-width: 600px) { #view-onboarding .surcharge-grid{ grid-template-columns: 1fr; } }
+  #view-onboarding .surcharge{
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px; cursor: pointer;
+    background: color-mix(in oklab, var(--bg-3) 40%, transparent);
+    transition: all .15s ease;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  }
+  #view-onboarding .surcharge.on{
+    border-color: var(--accent);
+    background: color-mix(in oklab, var(--accent) 8%, var(--bg-3));
+  }
+  #view-onboarding .surcharge .label{ font-size: 14px; font-weight: 500; }
+  #view-onboarding .surcharge .desc{ font-size: 12px; color: var(--text-3); }
+  #view-onboarding .surcharge input{ width: 80px; padding: 8px 10px; font-size: 13px; }
+
+  /* ---------- Branding ---------- */
+  #view-onboarding .tone-grid{ display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
+  @media (max-width: 600px) { #view-onboarding .tone-grid{ grid-template-columns: 1fr 1fr; } }
+  #view-onboarding .tone{
+    padding: 14px 10px; border-radius: 12px; border: 1px solid var(--border);
+    cursor: pointer; text-align: center; background: color-mix(in oklab, var(--bg-3) 40%, transparent);
+    transition: all .15s ease;
+  }
+  #view-onboarding .tone:hover{ border-color: color-mix(in oklab, var(--accent) 30%, var(--border)); }
+  #view-onboarding .tone.on{
+    border-color: var(--accent);
+    background: color-mix(in oklab, var(--accent) 10%, var(--bg-3));
+  }
+  #view-onboarding .tone .emoji{ font-size: 22px; }
+  #view-onboarding .tone .name{ font-size: 13px; font-weight: 500; margin-top: 4px; }
+
+  #view-onboarding .color-row{ display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  #view-onboarding .color-swatch{
+    width: 36px; height: 36px; border-radius: 99px; cursor: pointer;
+    border: 2px solid transparent; position: relative;
+    transition: transform .15s ease;
+  }
+  #view-onboarding .color-swatch.on{
+    border-color: var(--text); transform: scale(1.1);
+  }
+  #view-onboarding .color-swatch.custom{
+    border: 2px dashed var(--border); display: grid; place-items: center;
+    color: var(--text-3); background: transparent; overflow: hidden;
+  }
+  #view-onboarding .color-swatch.custom input[type=color]{
+    position: absolute; inset: 0; opacity: 0; cursor: pointer;
+  }
+
+  /* ---------- Nav buttons ---------- */
+  #view-onboarding .nav-btns{
+    display: flex; justify-content: space-between; gap: 12px;
+    margin-top: 36px;
+  }
+  #view-onboarding .btn{
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    font-family: inherit; font-size: 15px; font-weight: 500;
+    padding: 14px 22px; border-radius: 12px;
+    border: 1px solid transparent; cursor: pointer; text-decoration: none;
+    transition: transform .15s ease, box-shadow .2s ease;
+    line-height: 1; white-space: nowrap;
+  }
+  #view-onboarding .btn-primary{
+    color: #04141a;
+    background: linear-gradient(180deg, var(--accent-2) 0%, var(--accent) 100%);
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--accent) 50%, transparent) inset,
+      0 8px 24px -4px var(--accent-glow);
+  }
+  #view-onboarding .btn-primary:hover{ transform: translateY(-1px); box-shadow: 0 0 0 1px var(--accent) inset, 0 14px 36px -4px var(--accent-glow); }
+  #view-onboarding .btn-ghost{ color: var(--text); background: transparent; border-color: var(--border); }
+  #view-onboarding .btn-ghost:hover{ background: color-mix(in oklab, var(--accent) 6%, transparent); border-color: color-mix(in oklab, var(--accent) 30%, var(--border)); }
+  #view-onboarding .btn:disabled{ opacity: 0.5; cursor: not-allowed; }
+  #view-onboarding .btn .arrow{ transition: transform .15s ease; }
+  #view-onboarding .btn:hover .arrow{ transform: translateX(3px); }
+
+  /* ---------- Preview column ---------- */
+  #view-onboarding .preview-col{
+    background: linear-gradient(180deg, color-mix(in oklab, var(--bg-2) 60%, transparent), color-mix(in oklab, var(--bg-3) 60%, transparent));
+    border-left: 1px solid var(--border);
+    padding: 56px 32px;
+    position: sticky; top: 0; height: 100vh;
+    display: flex; flex-direction: column; gap: 18px;
+    overflow-y: auto;
+  }
+  #view-onboarding .preview-tag{
+    font-family: 'Geist Mono', monospace; font-size: 11px;
+    color: var(--text-3); text-transform: uppercase; letter-spacing: 0.12em;
+  }
+  #view-onboarding .preview-tag .live{
+    display: inline-flex; align-items: center; gap: 6px; color: var(--accent-2);
+  }
+  #view-onboarding .preview-tag .live::before{
+    content: ""; width: 6px; height: 6px; border-radius: 99px; background: var(--accent);
+    box-shadow: 0 0 10px var(--accent-glow);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse { 50% { opacity: .4; } }
+
+  #view-onboarding .preview-card{
+    background: linear-gradient(180deg, color-mix(in oklab, var(--bg) 80%, transparent), color-mix(in oklab, var(--bg-2) 80%, transparent));
+    border: 1px solid var(--border); border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,.5);
+  }
+  #view-onboarding .preview-head{
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  #view-onboarding .preview-head .av{
+    width: 32px; height: 32px; border-radius: 99px;
+    background: linear-gradient(135deg, color-mix(in oklab, var(--bot-color) 70%, white), var(--bot-color));
+    display: grid; place-items: center; color: #04141a; font-weight: 700; font-size: 14px;
+    box-shadow: 0 0 16px -2px color-mix(in oklab, var(--bot-color) 50%, transparent);
+  }
+  #view-onboarding .preview-head .name{ font-weight: 600; font-size: 14px; }
+  #view-onboarding .preview-head .status{ font-size: 11px; color: var(--text-3); display: flex; align-items: center; gap: 5px; }
+  #view-onboarding .preview-head .status::before{ content: ""; width: 6px; height: 6px; border-radius: 99px; background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+  #view-onboarding .preview-body{
+    padding: 16px;
+    display: flex; flex-direction: column; gap: 8px;
+    min-height: 320px;
+  }
+  #view-onboarding .preview-body .b{
+    max-width: 80%; padding: 9px 13px; border-radius: 14px; font-size: 13px; line-height: 1.4;
+    transition: background .2s ease, color .2s ease;
+  }
+  #view-onboarding .preview-body .b.bot{
+    background: color-mix(in oklab, var(--bg-3) 80%, transparent);
+    border: 1px solid var(--border-soft);
+    align-self: flex-start;
+  }
+  #view-onboarding .preview-body .b.user{
+    background: var(--bot-color); color: #04141a; align-self: flex-end; font-weight: 500;
+  }
+  #view-onboarding .preview-body .typed{
+    overflow: hidden;
+  }
+  #view-onboarding .preview-input{
+    border-top: 1px solid var(--border-soft); padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px;
+    color: var(--text-3); font-size: 13px;
+  }
+  #view-onboarding .preview-input .pulse-dot{ width: 8px; height: 8px; border-radius: 99px; background: var(--bot-color); animation: pulse 1.6s infinite; }
+
+  #view-onboarding .preview-summary{
+    border: 1px dashed var(--border); border-radius: 14px;
+    padding: 14px;
+  }
+  #view-onboarding .preview-summary .title{
+    font-family: 'Geist Mono', monospace; font-size: 11px;
+    color: var(--text-3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px;
+  }
+  #view-onboarding .preview-summary dl{ margin: 0; display: flex; flex-direction: column; gap: 6px; }
+  #view-onboarding .preview-summary .kv{ display: flex; justify-content: space-between; font-size: 12px; gap: 12px; }
+  #view-onboarding .preview-summary .kv dt{ color: var(--text-3); }
+  #view-onboarding .preview-summary .kv dd{ color: var(--text); margin: 0; font-weight: 500; text-align: right; max-width: 60%; }
+  #view-onboarding .preview-summary .kv dd.muted{ color: var(--text-3); font-style: italic; }
+
+  /* ---------- Step container ---------- */
+  #view-onboarding .step-pane{ display: none; animation: pane-in .35s cubic-bezier(.2,.7,.2,1); }
+  #view-onboarding .step-pane.active{ display: block; }
+  @keyframes pane-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ---------- Success screen ---------- */
+  #view-onboarding .success-screen{ text-align: center; padding: 40px 0; }
+  #view-onboarding .success-screen .check-circle{
+    width: 80px; height: 80px; border-radius: 99px;
+    background: linear-gradient(180deg, var(--accent-2), var(--accent));
+    display: grid; place-items: center; margin: 0 auto 24px;
+    box-shadow: 0 0 60px -10px var(--accent-glow), 0 0 0 8px color-mix(in oklab, var(--accent) 12%, transparent);
+    animation: pop-in .6s cubic-bezier(.2,.9,.2,1.1);
+  }
+  @keyframes pop-in {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  #view-onboarding .success-screen h1{ font-size: 44px; letter-spacing: -0.02em; font-weight: 600; margin: 0 0 10px; }
+  #view-onboarding .success-screen p{ font-size: 17px; color: var(--text-2); max-width: 520px; margin: 0 auto 36px; }
+
+  #view-onboarding .timeline{ max-width: 560px; margin: 0 auto; text-align: left; position: relative; }
+  #view-onboarding .timeline::before{
+    content: ""; position: absolute; left: 19px; top: 16px; bottom: 16px;
+    width: 2px;
+    background: linear-gradient(180deg, var(--accent), color-mix(in oklab, var(--text) 12%, transparent));
+  }
+  #view-onboarding .tl-item{
+    display: grid; grid-template-columns: 40px 1fr; gap: 18px;
+    margin-bottom: 24px; position: relative;
+  }
+  #view-onboarding .tl-item .marker{
+    width: 40px; height: 40px; border-radius: 99px;
+    background: var(--bg-3); border: 2px solid var(--accent);
+    display: grid; place-items: center;
+    color: var(--accent-2); font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 600;
+    z-index: 1;
+  }
+  #view-onboarding .tl-item.now .marker{
+    background: linear-gradient(180deg, var(--accent-2), var(--accent));
+    color: #04141a; box-shadow: 0 0 30px var(--accent-glow);
+  }
+  #view-onboarding .tl-item .body h4{ margin: 8px 0 4px; font-size: 16px; font-weight: 600; }
+  #view-onboarding .tl-item .body p{ margin: 0; font-size: 14px; color: var(--text-2); }
+
+  /* ---------- Helpers ---------- */
+  #view-onboarding .hint{ font-size: 12px; color: var(--text-3); margin-top: 4px; }
+
+</style>
+
+<style id="view-routing">
+  #view-sales, #view-onboarding { display: none; }
+  body[data-view="sales"] #view-sales { display: block; }
+  body[data-view="onboarding"] #view-onboarding { display: block; }
+  /* Hide sales nav/footer when onboarding active (onboarding has its own nav) */
+  body[data-view="onboarding"] > nav.top:not(#view-onboarding nav.top) { display: none !important; }
+  body[data-view="onboarding"] .sticky-cta { display: none !important; }
+</style>
+</head>
+<body data-theme="dark">
+<template id="__bundler_thumbnail" data-bg-color="#07090d">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#22d3ee"/>
+        <stop offset="100%" stop-color="#06b6d4"/>
+      </linearGradient>
+      <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.5"/>
+        <stop offset="100%" stop-color="#06b6d4" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <rect width="1200" height="800" fill="#07090d"/>
+    <circle cx="600" cy="400" r="380" fill="url(#glow)"/>
+    <rect x="450" y="250" width="300" height="300" rx="60" fill="url(#g)"/>
+    <text x="600" y="455" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="170" fill="#04141a">C</text>
+  </svg>
+</template>
+<div id="view-sales">
+<div class="bg-fx" id="bgfx"></div>
+<div class="grid-fx"></div>
+
+<nav class="top">
+  <div class="wrap row">
+    <a href="#" class="logo">
+      <span class="logo-mark">C</span> CleanBot
+    </a>
+    <div class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#roi">ROI</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <a href="cleanbot-onboarding.html" class="btn btn-primary">Start Free Trial <span class="arrow">→</span></a>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <!-- HERO -->
+  <section class="s hero">
+    <div class="wrap hero-grid">
+      <div>
+        <div class="eyebrow"><span class="dot"></span> Built for cleaning businesses · UK · US · AU</div>
+        <h1 style="margin-top:22px;">Never miss <span class="serif em">another</span><br>cleaning job <span class="grad">again.</span></h1>
+        <p class="lede">Your AI receptionist quotes, books, and follows up 24/7 — so the calls you'd otherwise miss turn into jobs you actually win. Setup in under 10 minutes.</p>
+        <div class="hero-cta">
+          <a href="cleanbot-onboarding.html" class="btn btn-primary btn-lg">Start Free Trial <span class="arrow">→</span></a>
+          <a href="#roi" class="btn btn-ghost btn-lg">See your ROI</a>
+        </div>
+        <div class="trust-row">
+          <div class="avatars">
+            <span>JM</span><span>SK</span><span>LW</span><span>+</span>
+          </div>
+          <div>
+            <div class="stars">★★★★★</div>
+            <div style="margin-top:2px;">Trusted by 1,200+ cleaning teams worldwide</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat demo -->
+      <div class="chat-card">
+        <div class="chat-floats float-1">↳ Booking confirmed</div>
+        <div class="chat-floats float-2">↳ Quote sent · 2:14 AM</div>
+        <div class="chat-head">
+          <div class="avatar">C</div>
+          <div>
+            <div class="name">CleanBot · Sparkle Cleaning Co.</div>
+            <div class="status">Online · Replies instantly</div>
+          </div>
+        </div>
+        <div class="chat-body">
+          <div class="bubble bot b1">Hi! I'm CleanBot 👋 Looking for a clean? I can give you an instant quote.</div>
+          <div class="bubble user b2">Yes — 3-bed flat, end of tenancy</div>
+          <div class="bubble bot b3">Got it. What postcode are we cleaning?</div>
+          <div class="bubble user b4">SW9 8RL</div>
+          <div class="bubble bot b5">Perfect — that's <strong style="color:var(--accent-2)">£285 inc. oven & windows</strong>. I have Friday at 9am or Saturday at 11am. Want to book one?</div>
+          <div class="quick">
+            <button>Friday 9am</button>
+            <button>Saturday 11am</button>
+            <button>See more</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- proof bar -->
+    <div class="wrap">
+      <div class="proof-bar">
+        <div class="proof-item"><div class="num">£4.2M+</div><div class="lbl">Bookings recovered</div></div>
+        <div class="proof-item"><div class="num">38%</div><div class="lbl">Avg. uplift in jobs won</div></div>
+        <div class="proof-item"><div class="num">&lt;9s</div><div class="lbl">Avg. response time</div></div>
+        <div class="proof-item"><div class="num">24 / 7</div><div class="lbl">Always on, always answering</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAIN -->
+  <section class="s" id="pain">
+    <div class="wrap">
+      <div class="s-head">
+        <div class="eyebrow"><span class="dot"></span> The problem</div>
+        <h2>Every missed call is a job <span class="serif">walking</span> to your competitor.</h2>
+        <p>Cleaning is a now-or-never business. If you don't reply in minutes, they've already booked someone else.</p>
+      </div>
+
+      <div class="pain-grid">
+        <div class="pain-card">
+          <span class="num">01</span>
+          <span class="stat">62% of calls go to voicemail</span>
+          <h3>You miss calls while cleaning.</h3>
+          <p>You're elbow-deep in a deep clean — you can't pick up. By the time you call back, they've moved on.</p>
+        </div>
+        <div class="pain-card">
+          <span class="num">02</span>
+          <span class="stat">After 6pm? Lost.</span>
+          <h3>After-hours leads disappear.</h3>
+          <p>Most enquiries come in evenings and weekends. Without 24/7 cover, that's pure revenue evaporating.</p>
+        </div>
+        <div class="pain-card">
+          <span class="num">03</span>
+          <span class="stat">No follow-up = no booking</span>
+          <h3>Quotes never get followed up.</h3>
+          <p>You sent a price, they got distracted. No nudge means no booking. CleanBot follows up automatically.</p>
+        </div>
+      </div>
+
+      <div class="pain-cta-row">
+        <div class="label">— Curious how much this is costing you? —</div>
+        <div class="big">Find out in 30 seconds with the calculator below.</div>
+        <a href="#roi" class="btn btn-primary">See my ROI <span class="arrow">↓</span></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROI CALCULATOR -->
+  <section class="s roi-section" id="roi">
+    <div class="wrap">
+      <div class="s-head">
+        <div class="eyebrow"><span class="dot"></span> The math</div>
+        <h2>How much are you <span class="serif">leaving</span> on the table?</h2>
+        <p>Drag the sliders. Watch the number move. This is what CleanBot pays back, every month.</p>
+      </div>
+
+      <div class="roi-card">
+        <div class="roi-grid">
+          <div class="slider-block">
+            <div style="display:flex; justify-content:flex-end;">
+              <div class="currency-toggle" id="cur">
+                <button data-c="GBP" class="on">£ GBP</button>
+                <button data-c="USD">$ USD</button>
+                <button data-c="AUD">A$ AUD</button>
+              </div>
+            </div>
+
+            <div class="slider-row">
+              <div class="slider-label"><span class="lbl">Calls / enquiries per week</span><span class="val" id="v-calls">40</span></div>
+              <input type="range" id="r-calls" min="5" max="200" value="40" />
+            </div>
+            <div class="slider-row">
+              <div class="slider-label"><span class="lbl">% you currently miss</span><span class="val" id="v-miss">35%</span></div>
+              <input type="range" id="r-miss" min="0" max="80" value="35" />
+            </div>
+            <div class="slider-row">
+              <div class="slider-label"><span class="lbl">% of calls that book a job</span><span class="val" id="v-conv">25%</span></div>
+              <input type="range" id="r-conv" min="5" max="80" value="25" />
+            </div>
+            <div class="slider-row">
+              <div class="slider-label"><span class="lbl">Avg. job value</span><span class="val" id="v-avg">£140</span></div>
+              <input type="range" id="r-avg" min="40" max="800" value="140" />
+            </div>
+          </div>
+
+          <div class="roi-readout">
+            <div class="roi-row"><span class="k">Jobs you're losing / month</span><span class="v minus" id="o-lost">14</span></div>
+            <div class="roi-row"><span class="k">Revenue lost / month</span><span class="v minus" id="o-rev">−£1,960</span></div>
+            <div class="roi-divider"></div>
+            <div class="roi-row"><span class="k">Recovered with CleanBot (~75%)</span><span class="v plus" id="o-rec">+£1,470</span></div>
+            <div class="roi-row"><span class="k">CleanBot Pro plan</span><span class="v" style="color:var(--text-2);">−£179</span></div>
+            <div class="roi-divider"></div>
+
+            <div class="roi-hero">
+              <div class="label">Net gain per month</div>
+              <div class="num" id="o-net">£1,291</div>
+              <div class="sub">≈ <span id="o-year">£15,492</span> per year · pays for itself <span id="o-pay">7×</span> over</div>
+            </div>
+
+            <a href="cleanbot-onboarding.html" class="btn btn-primary btn-lg" style="justify-content:center; margin-top: 6px;">
+              Start Free Trial <span class="arrow">→</span>
+            </a>
+            <div style="text-align:center; font-size:12px; color:var(--text-3);">14 days free · no credit card</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="s" id="how">
+    <div class="wrap">
+      <div class="s-head">
+        <div class="eyebrow"><span class="dot"></span> Setup</div>
+        <h2>Live in <span class="serif">10 minutes.</span> No code. No headaches.</h2>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <span class="num">01</span>
+          <h3>Tell us about your business</h3>
+          <p>Services, pricing, areas you cover. Takes 4 minutes.</p>
+          <div class="icon mono">name · email · area</div>
+        </div>
+        <div class="step">
+          <span class="num">02</span>
+          <h3>Pick your plan & branding</h3>
+          <p>Bot name, color, tone of voice — match it to your brand.</p>
+          <div class="icon mono">tone: friendly</div>
+        </div>
+        <div class="step">
+          <span class="num">03</span>
+          <h3>Drop in the snippet</h3>
+          <p>One line of code on your website. Or paste into your link-in-bio.</p>
+          <div class="icon mono">&lt;script src="…"&gt;</div>
+        </div>
+        <div class="step">
+          <span class="num">04</span>
+          <h3>Watch jobs roll in</h3>
+          <p>Quotes, bookings, follow-ups — handled. Wake up to a fuller calendar.</p>
+          <div class="icon mono">+12 jobs this week</div>
+        </div>
+      </div>
+
+      <div style="text-align:center; margin-top: 40px;">
+        <a href="cleanbot-onboarding.html" class="btn btn-primary btn-lg">Set up my CleanBot <span class="arrow">→</span></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section class="s" id="pricing">
+    <div class="wrap">
+      <div class="s-head">
+        <div class="eyebrow"><span class="dot"></span> Pricing</div>
+        <h2>Simple plans. <span class="serif">Honest</span> pricing.</h2>
+        <p>14-day free trial on every plan. Cancel any time. No setup fees.</p>
+      </div>
+
+      <div class="pricing-grid" id="pricing-cards">
+        <div class="price-card" data-tier="0">
+          <div>
+            <h3>Starter</h3>
+            <div class="desc">For solo cleaners getting started</div>
+          </div>
+          <div class="price">$99 <small>/mo</small></div>
+          <ul>
+            <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-2)"/></svg> Up to 100 conversations / mo</li>
+            <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-2)"/></svg> Instant quoting & booking</li>
+            <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-2)"/></svg> Email + WhatsApp channels</li>
+            <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-2)"/></svg> Basic branding</li>
+          </ul>
+          <a href="cleanbot-onboarding.html?plan=starter" class="btn btn-ghost">Start Free Trial</a>
+        </div>
+
+        <div class="price-card popular" data-tier="1">
+          <span class="badge">MOST POPULAR</span>
+          <div>
+            <h3>Pro</h3>
+            <div class="desc">For growing teams of 5–20 cleaners</div>
+          </div>
+          <div class="price">$179 <small>/mo</small></div>
+          <ul>
+            <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-2)"/></svg> Unlimited conversations</li>
+            <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-2)"/></svg> Auto follow-ups & no-show recovery</li>
+            <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-2)"/></svg> Calendar sync (Google, Outlook)</li>
+            <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-2)"/></svg> Custom branding & tone of voice</li>
+            <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-2)"/></svg> SMS, WhatsApp, web, IG DM</li>
+            <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-2)"/></svg> Priority support</li>
+          </ul>
+          <a href="cleanbot-onboarding.html?plan=pro" class="btn btn-primary">Start Free Trial <span class="arrow">→</span></a>
+        </div>
+
+        <div class="price-card" data-tier="2">
+          <div>
+            <h3>Enterprise</h3>
+            <div class="desc">Multi-location & franchises</div>
+          </div>
+          <div class="price">$299 <small>/mo</small></div>
+          <ul>
+            <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-2)"/></svg> Everything in Pro</li>
+            <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-2)"/></svg> Multiple locations & teams</li>
+            <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-2)"/></svg> CRM integrations (HubSpot, Pipedrive)</li>
+            <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-2)"/></svg> Dedicated success manager</li>
+            <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-2)"/></svg> Custom SLA & onboarding</li>
+          </ul>
+          <a href="cleanbot-onboarding.html?plan=enterprise" class="btn btn-ghost">Talk to sales</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section class="s">
+    <div class="wrap">
+      <div class="s-head">
+        <div class="eyebrow"><span class="dot"></span> Loved by operators</div>
+        <h2>Real teams. <span class="serif">Real</span> results.</h2>
+      </div>
+
+      <div class="quote-grid">
+        <div class="quote">
+          <div class="stars">★★★★★ <span class="flag mono">🇬🇧 UK</span></div>
+          <q>We were missing 30+ enquiries a week before CleanBot. First month live, we booked an extra £6,200 in jobs. It paid for itself in three days.</q>
+          <div class="who">
+            <div class="av">JM</div>
+            <div>
+              <div class="name">James Morley</div>
+              <div class="meta">Owner · Sparkle Clean London</div>
+            </div>
+          </div>
+        </div>
+        <div class="quote">
+          <div class="stars">★★★★★ <span class="flag mono">🇺🇸 US</span></div>
+          <q>Honestly the best $179 I spend each month. It quotes faster than I do, and it never forgets to follow up. My calendar has never been this full.</q>
+          <div class="who">
+            <div class="av">SK</div>
+            <div>
+              <div class="name">Sarah Kim</div>
+              <div class="meta">Founder · Bright & Co · Austin, TX</div>
+            </div>
+          </div>
+        </div>
+        <div class="quote">
+          <div class="stars">★★★★★ <span class="flag mono">🇦🇺 AU</span></div>
+          <q>Set it up on a Tuesday, had bookings come in overnight by Wednesday. The tone matches my brand perfectly — clients have no idea it's a bot.</q>
+          <div class="who">
+            <div class="av">LW</div>
+            <div>
+              <div class="name">Liam Walsh</div>
+              <div class="meta">Director · Coastal Cleans · Sydney</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="s" id="faq">
+    <div class="wrap">
+      <div class="s-head">
+        <div class="eyebrow"><span class="dot"></span> FAQ</div>
+        <h2>Questions, <span class="serif">answered.</span></h2>
+      </div>
+
+      <div class="faq">
+        <details open><summary>How long does setup take? <span class="plus">+</span></summary><div class="ans">Around 10 minutes. You'll fill in a 5-step form (your services, prices, schedule, branding) and we generate your bot instantly. Drop in one line of code or share the link — that's it.</div></details>
+        <details><summary>Will it sound like a robot? <span class="plus">+</span></summary><div class="ans">No. You set the tone — friendly, formal, casual, professional. Most customers can't tell they're chatting with a bot, and we always offer a clean handover to a human if they ask.</div></details>
+        <details><summary>What channels does it work on? <span class="plus">+</span></summary><div class="ans">Web chat, SMS, WhatsApp, Instagram DMs, Facebook Messenger, and email. Pro and Enterprise plans include all channels.</div></details>
+        <details><summary>Does it integrate with my calendar? <span class="plus">+</span></summary><div class="ans">Yes — Google Calendar, Outlook, and Apple Calendar are supported on Pro and above. Bookings appear in real time and we never double-book.</div></details>
+        <details><summary>Can I cancel any time? <span class="plus">+</span></summary><div class="ans">Yes. Monthly plans, cancel from your dashboard with one click. No fees, no questions.</div></details>
+        <details><summary>What if I have unusual pricing or services? <span class="plus">+</span></summary><div class="ans">During onboarding you build your own pricing table — per-bedroom, hourly, flat fees, surcharges, anything. The bot only quotes from what you've configured.</div></details>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="s" style="padding-top: 0;">
+    <div class="wrap">
+      <div class="final-cta">
+        <div class="eyebrow"><span class="dot"></span> Ready when you are</div>
+        <h2 style="margin-top:18px;">Stop losing jobs to <span class="serif">slow replies.</span></h2>
+        <p>14 days free. No credit card. Live in 10 minutes. Cancel any time.</p>
+        <div class="row">
+          <a href="cleanbot-onboarding.html" class="btn btn-primary btn-lg">Start Free Trial <span class="arrow">→</span></a>
+          <a href="#roi" class="btn btn-ghost btn-lg">Calculate my ROI</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap row">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="logo-mark" style="width:22px;height:22px;font-size:11px;">C</span>
+        <span>© 2026 CleanBot · Made for cleaning operators</span>
+      </div>
+      <div class="links">
+        <a href="#">Privacy</a><a href="#">Terms</a><a href="#">Status</a><a href="#">Contact</a>
+      </div>
+    </div>
+  </footer>
+</main>
+
+<!-- Sticky bottom CTA on mobile -->
+<div class="sticky-cta">
+  <div class="lbl">14 days free · no card</div>
+  <a href="cleanbot-onboarding.html" class="btn btn-primary">Start Trial →</a>
+</div>
+
+<!-- ROI calculator -->
+<script>
+(function(){
+  const el = id => document.getElementById(id);
+  const calls = el('r-calls'), miss = el('r-miss'), conv = el('r-conv'), avg = el('r-avg');
+  const vc = el('v-calls'), vm = el('v-miss'), vco = el('v-conv'), va = el('v-avg');
+  const oLost = el('o-lost'), oRev = el('o-rev'), oRec = el('o-rec'), oNet = el('o-net'), oYear = el('o-year'), oPay = el('o-pay');
+  let currency = 'GBP';
+  const sym = {GBP:'£', USD:'$', AUD:'A$'};
+  const planCost = 179;
+
+  function fillBar(input){
+    const p = ((input.value - input.min) / (input.max - input.min)) * 100;
+    input.style.setProperty('--p', p + '%');
+  }
+  function fmt(n){ return sym[currency] + Math.round(n).toLocaleString(); }
+  function update(){
+    [calls, miss, conv, avg].forEach(fillBar);
+    const c = +calls.value, m = +miss.value, cv = +conv.value, av = +avg.value;
+    const monthlyCalls = c * 4.33;
+    const missedJobs = monthlyCalls * (m/100) * (cv/100);
+    const lostRev = missedJobs * av;
+    const recovered = lostRev * 0.75;
+    const net = recovered - planCost;
+
+    vc.textContent = c;
+    vm.textContent = m + '%';
+    vco.textContent = cv + '%';
+    va.textContent = sym[currency] + av;
+    oLost.textContent = '−' + Math.round(missedJobs);
+    oRev.textContent = '−' + fmt(lostRev);
+    oRec.textContent = '+' + fmt(recovered);
+    oNet.textContent = fmt(net);
+    oYear.textContent = fmt(net * 12);
+    oPay.textContent = (recovered / planCost).toFixed(1) + '×';
+  }
+  [calls, miss, conv, avg].forEach(s => s.addEventListener('input', update));
+  document.querySelectorAll('#cur button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#cur button').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      currency = b.dataset.c;
+      update();
+    });
+  });
+  update();
+})();
+</script>
+
+<!-- React + Tweaks panel -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "cyan",
+  "theme": "dark",
+  "popularTier": 1
+}/*EDITMODE-END*/;
+
+const ACCENTS = {
+  cyan:    { c1: '#06b6d4', c2: '#22d3ee', glow: 'rgba(6, 182, 212, 0.35)' },
+  indigo:  { c1: '#6366f1', c2: '#818cf8', glow: 'rgba(99, 102, 241, 0.35)' },
+  emerald: { c1: '#10b981', c2: '#34d399', glow: 'rgba(16, 185, 129, 0.35)' },
+  violet:  { c1: '#a855f7', c2: '#c084fc', glow: 'rgba(168, 85, 247, 0.35)' },
+  amber:   { c1: '#f59e0b', c2: '#fbbf24', glow: 'rgba(245, 158, 11, 0.35)' },
+};
+
+function applyTweaks(t){
+  const a = ACCENTS[t.accent] || ACCENTS.cyan;
+  document.documentElement.style.setProperty('--accent', a.c1);
+  document.documentElement.style.setProperty('--accent-2', a.c2);
+  document.documentElement.style.setProperty('--accent-glow', a.glow);
+  document.body.dataset.theme = t.theme;
+  document.querySelectorAll('.price-card').forEach((card, i) => {
+    const isPop = i === t.popularTier;
+    card.classList.toggle('popular', isPop);
+    let badge = card.querySelector('.badge');
+    if (isPop && !badge) {
+      badge = document.createElement('span');
+      badge.className = 'badge';
+      badge.textContent = 'MOST POPULAR';
+      card.prepend(badge);
+    } else if (!isPop && badge) {
+      badge.remove();
+    }
+    // also swap CTA style
+    const cta = card.querySelector('a.btn');
+    if (cta) {
+      cta.classList.toggle('btn-primary', isPop);
+      cta.classList.toggle('btn-ghost', !isPop);
+    }
+  });
+}
+
+function App(){
+  const { TweaksPanel, useTweaks, TweakSection } = window;
+  const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  React.useEffect(() => { applyTweaks(tweaks); }, [tweaks]);
+
+  return (
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Accent color">
+        <div className="tw-color-row">
+          {Object.entries(ACCENTS).map(([k, v]) => (
+            <button key={k}
+              className={tweaks.accent === k ? 'on' : ''}
+              style={{ background: `linear-gradient(135deg, ${v.c2}, ${v.c1})` }}
+              onClick={() => setTweak('accent', k)}
+              title={k}/>
+          ))}
+        </div>
+      </TweakSection>
+      <TweakSection label="Theme">
+        <div className="tw-toggle-row">
+          <button className={tweaks.theme === 'dark' ? 'on' : ''} onClick={() => setTweak('theme', 'dark')}>Dark</button>
+          <button className={tweaks.theme === 'light' ? 'on' : ''} onClick={() => setTweak('theme', 'light')}>Light</button>
+        </div>
+      </TweakSection>
+      <TweakSection label="Highlight tier">
+        <div className="tw-toggle-row">
+          {['Starter', 'Pro', 'Enterprise'].map((label, i) => (
+            <button key={i} className={tweaks.popularTier === i ? 'on' : ''} onClick={() => setTweak('popularTier', i)}>{label}</button>
+          ))}
+        </div>
+      </TweakSection>
+    </TweaksPanel>
+  );
+}
+
+// Apply default tweaks even before panel mounts
+applyTweaks(TWEAK_DEFAULTS);
+
+const root = document.createElement('div');
+document.body.appendChild(root);
+ReactDOM.createRoot(root).render(<App/>);
+</script>
+
+</div>
+<div id="view-onboarding">
+<div class="bg-fx"></div>
+<div class="grid-fx"></div>
+
+<nav class="top">
+  <div class="row">
+    <a href="cleanbot-sales-page.html" class="logo">
+      <span class="logo-mark">C</span> CleanBot
+    </a>
+    <a href="#" class="help">Need help? <span class="__cf_email__" data-cfemail="422a272e2e2d02212e27232c202d366c233232">[email&#160;protected]</span></a>
+  </div>
+</nav>
+
+<div class="shell">
+<div class="grid">
+  <!-- FORM COLUMN -->
+  <div class="form-col">
+    <!-- Progress -->
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-meta">
+        <span class="step-num" id="stepLabel">Step 01 of 05 · Business info</span>
+        <span class="pct" id="pctLabel">20%</span>
+      </div>
+      <div class="progress-bar"><div class="fill" id="progFill" style="transform:scaleX(0.2)"></div></div>
+      <div class="stepper" id="stepper"></div>
+    </div>
+
+    <!-- STEP 1: Business info -->
+    <div class="step-pane active" data-step="1">
+      <div class="step-head">
+        <span class="eyebrow"><span class="dot"></span> About you</span>
+        <h1>Let's start with your <span class="serif">business.</span></h1>
+        <p>This is what your customers will see. You can change everything later.</p>
+      </div>
+      <div class="fields">
+        <div class="field">
+          <label>Business name <span class="req">*</span></label>
+          <input type="text" id="biz_name" placeholder="e.g. Sparkle Cleaning Co." />
+        </div>
+        <div class="field row2">
+          <div class="field">
+            <label>Email <span class="req">*</span></label>
+            <input type="email" id="biz_email" placeholder="you@yourbusiness.com" />
+          </div>
+          <div class="field">
+            <label>Phone</label>
+            <input type="tel" id="biz_phone" placeholder="+44 7700 900000" />
+          </div>
+        </div>
+        <div class="field row2">
+          <div class="field">
+            <label>City</label>
+            <input type="text" id="biz_city" placeholder="London" />
+          </div>
+          <div class="field">
+            <label>Country</label>
+            <select id="biz_country">
+              <option>United Kingdom</option>
+              <option>United States</option>
+              <option>Australia</option>
+              <option>Canada</option>
+              <option>New Zealand</option>
+              <option>Ireland</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Plan -->
+    <div class="step-pane" data-step="2">
+      <div class="step-head">
+        <span class="eyebrow"><span class="dot"></span> Pick a plan</span>
+        <h1>Choose what fits — <span class="serif">free for 14 days.</span></h1>
+        <p>No card needed. Cancel any time. You can upgrade or downgrade later.</p>
+      </div>
+      <div class="plan-grid" id="planGrid">
+        <div class="plan" data-plan="starter">
+          <div class="name">Starter</div>
+          <div class="price">$99 <small>/mo</small></div>
+          <div class="desc">Solo cleaners getting started.</div>
+          <ul>
+            <li>100 conversations / mo</li>
+            <li>Quoting & booking</li>
+            <li>Email + WhatsApp</li>
+          </ul>
+        </div>
+        <div class="plan selected" data-plan="pro">
+          <span class="pop">POPULAR</span>
+          <div class="name">Pro</div>
+          <div class="price">$179 <small>/mo</small></div>
+          <div class="desc">Growing teams of 5–20 cleaners.</div>
+          <ul>
+            <li>Unlimited conversations</li>
+            <li>Auto follow-ups</li>
+            <li>Calendar sync</li>
+            <li>All channels</li>
+          </ul>
+        </div>
+        <div class="plan" data-plan="enterprise">
+          <div class="name">Enterprise</div>
+          <div class="price">$299 <small>/mo</small></div>
+          <div class="desc">Multi-location & franchises.</div>
+          <ul>
+            <li>Everything in Pro</li>
+            <li>CRM integrations</li>
+            <li>Dedicated success</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Services -->
+    <div class="step-pane" data-step="3">
+      <div class="step-head">
+        <span class="eyebrow"><span class="dot"></span> Your services</span>
+        <h1>Build your <span class="serif">price list.</span></h1>
+        <p>The bot only quotes from what you set here. Add as many services as you offer.</p>
+      </div>
+      <div class="svc-table" id="svcTable">
+        <div class="svc-row head">
+          <div></div>
+          <div>Service</div>
+          <div>Unit</div>
+          <div>Price</div>
+          <div></div>
+        </div>
+        <!-- rows injected by JS -->
+      </div>
+      <button type="button" class="svc-add" id="svcAdd">+ Add a service</button>
+    </div>
+
+    <!-- STEP 4: Availability -->
+    <div class="step-pane" data-step="4">
+      <div class="step-head">
+        <span class="eyebrow"><span class="dot"></span> When you work</span>
+        <h1>When can you take <span class="serif">jobs?</span></h1>
+        <p>The bot will only book within these windows. Surcharges apply automatically.</p>
+      </div>
+      <div id="dayList"></div>
+
+      <h3 style="margin: 28px 0 12px; font-size: 16px; font-weight: 600;">Surcharges</h3>
+      <div class="surcharge-grid" id="surchargeGrid">
+        <label class="surcharge on">
+          <div>
+            <div class="label">Weekend bookings</div>
+            <div class="desc">Sat & Sun</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            +<input type="number" value="15" data-key="weekend" />%
+          </div>
+        </label>
+        <label class="surcharge on">
+          <div>
+            <div class="label">Same-day bookings</div>
+            <div class="desc">Within 24h</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            +<input type="number" value="20" data-key="sameday" />%
+          </div>
+        </label>
+        <label class="surcharge">
+          <div>
+            <div class="label">After 6pm</div>
+            <div class="desc">Evening cleans</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            +<input type="number" value="25" data-key="evening" />%
+          </div>
+        </label>
+        <label class="surcharge">
+          <div>
+            <div class="label">Bank holidays</div>
+            <div class="desc">UK bank hols</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            +<input type="number" value="50" data-key="holiday" />%
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- STEP 5: Branding -->
+    <div class="step-pane" data-step="5">
+      <div class="step-head">
+        <span class="eyebrow"><span class="dot"></span> Make it yours</span>
+        <h1>Give your bot a <span class="serif">personality.</span></h1>
+        <p>Match it to your brand — name, color, tone of voice.</p>
+      </div>
+      <div class="fields">
+        <div class="field">
+          <label>Bot name <span class="req">*</span></label>
+          <input type="text" id="bot_name" value="CleanBot" placeholder="CleanBot" maxlength="20" />
+          <div class="hint">What will customers see? e.g. "Sparkle Bot", "Bright Bot"</div>
+        </div>
+
+        <div class="field">
+          <label>Tone of voice</label>
+          <div class="tone-grid" id="toneGrid">
+            <div class="tone on" data-tone="friendly"><div class="emoji">👋</div><div class="name">Friendly</div></div>
+            <div class="tone" data-tone="professional"><div class="emoji">💼</div><div class="name">Professional</div></div>
+            <div class="tone" data-tone="casual"><div class="emoji">🤙</div><div class="name">Casual</div></div>
+            <div class="tone" data-tone="warm"><div class="emoji">☕</div><div class="name">Warm</div></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Brand color</label>
+          <div class="color-row" id="colorRow">
+            <div class="color-swatch on" data-c="#06b6d4" style="background:#06b6d4"></div>
+            <div class="color-swatch" data-c="#22c55e" style="background:#22c55e"></div>
+            <div class="color-swatch" data-c="#3b82f6" style="background:#3b82f6"></div>
+            <div class="color-swatch" data-c="#a855f7" style="background:#a855f7"></div>
+            <div class="color-swatch" data-c="#ec4899" style="background:#ec4899"></div>
+            <div class="color-swatch" data-c="#f59e0b" style="background:#f59e0b"></div>
+            <div class="color-swatch" data-c="#ef4444" style="background:#ef4444"></div>
+            <label class="color-swatch custom" id="customSwatchLabel">+
+              <input type="color" id="customColor" value="#06b6d4" />
+            </label>
+          </div>
+          <div class="hint">Used for chat bubbles, the avatar, and your bot's accents.</div>
+        </div>
+
+        <div class="field">
+          <label>Greeting message</label>
+          <textarea id="greeting" placeholder="Hi! 👋 I'm the booking assistant for...">Hi! 👋 I'm the booking assistant for Sparkle Cleaning. I can give you an instant quote — what kind of clean are you after?</textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUCCESS -->
+    <div class="step-pane" data-step="6">
+      <div class="success-screen">
+        <div class="check-circle">
+          <svg width="40" height="40" viewBox="0 0 32 32" fill="none">
+            <path d="M7 16l6 6 12-12" stroke="#04141a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h1>Your bot is <span class="serif" style="color:var(--accent-2)">live.</span></h1>
+        <p>We've spun up <strong id="liveBotName" style="color:var(--text)">CleanBot</strong> for your business. Here's what happens next.</p>
+
+        <div class="timeline">
+          <div class="tl-item now">
+            <div class="marker">✓</div>
+            <div class="body">
+              <h4>Now · Bot is ready</h4>
+              <p>Test it in your dashboard. Tweak responses. Hit "Go live" when you're happy.</p>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="marker">2m</div>
+            <div class="body">
+              <h4>In 2 minutes · Welcome email</h4>
+              <p>Check your inbox for your dashboard link, install snippet, and a quickstart video.</p>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="marker">1d</div>
+            <div class="body">
+              <h4>Within 24 hours · Setup call</h4>
+              <p>Our team reaches out to help you go live and answer any questions. Optional.</p>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="marker">14d</div>
+            <div class="body">
+              <h4>Day 14 · Trial ends</h4>
+              <p>If you love it, we'll start billing your <strong id="livePlan">Pro</strong> plan. If not, just cancel — no charges.</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 36px; display:flex; gap:10px; justify-content:center; flex-wrap: wrap;">
+          <a href="#" class="btn btn-primary">Open my dashboard <span class="arrow">→</span></a>
+          <a href="cleanbot-sales-page.html" class="btn btn-ghost">Back to home</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Nav buttons -->
+    <div class="nav-btns" id="navBtns">
+      <button class="btn btn-ghost" id="backBtn">← Back</button>
+      <button class="btn btn-primary" id="nextBtn">Next <span class="arrow">→</span></button>
+    </div>
+  </div>
+
+  <!-- PREVIEW COLUMN -->
+  <div class="preview-col">
+    <div class="preview-tag">
+      <span class="live">LIVE PREVIEW</span> · how customers will see it
+    </div>
+
+    <div class="preview-card">
+      <div class="preview-head">
+        <div class="av" id="pvAvatar">C</div>
+        <div style="flex:1;">
+          <div class="name" id="pvName">CleanBot</div>
+          <div class="status">Online · Replies instantly</div>
+        </div>
+      </div>
+      <div class="preview-body" id="pvBody">
+        <div class="b bot">Hi! 👋 I'm the booking assistant. I can give you an instant quote.</div>
+        <div class="b user">Yes — 3-bed flat, end of tenancy</div>
+        <div class="b bot">Got it. What postcode are we cleaning?</div>
+      </div>
+      <div class="preview-input">
+        <span class="pulse-dot"></span>
+        <span>Type a message…</span>
+      </div>
+    </div>
+
+    <div class="preview-summary">
+      <div class="title">Setup so far</div>
+      <dl>
+        <div class="kv"><dt>Business</dt><dd id="sumBiz" class="muted">—</dd></div>
+        <div class="kv"><dt>Plan</dt><dd id="sumPlan">Pro · $179/mo</dd></div>
+        <div class="kv"><dt>Services</dt><dd id="sumSvc">3 selected</dd></div>
+        <div class="kv"><dt>Availability</dt><dd id="sumAvail">Mon–Fri</dd></div>
+        <div class="kv"><dt>Tone</dt><dd id="sumTone">Friendly</dd></div>
+      </dl>
+    </div>
+  </div>
+</div>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+(function(){
+  const TOTAL_STEPS = 5; // step 6 is the success screen
+  let step = 1;
+
+  // Read plan from URL if present
+  const urlPlan = new URLSearchParams(window.location.search).get('plan');
+
+  // ----- State -----
+  const state = {
+    plan: urlPlan && ['starter','pro','enterprise'].includes(urlPlan) ? urlPlan : 'pro',
+    services: [
+      { on: true,  name: 'Standard clean',     unit: 'per hour',  price: 35 },
+      { on: true,  name: 'Deep clean',         unit: 'per visit', price: 180 },
+      { on: true,  name: 'End of tenancy',     unit: 'per visit', price: 285 },
+      { on: false, name: 'Office cleaning',    unit: 'per hour',  price: 28 },
+      { on: false, name: 'Carpet cleaning',    unit: 'per room',  price: 45 },
+    ],
+    days: [
+      { name: 'Monday',    on: true,  start: '08:00', end: '18:00' },
+      { name: 'Tuesday',   on: true,  start: '08:00', end: '18:00' },
+      { name: 'Wednesday', on: true,  start: '08:00', end: '18:00' },
+      { name: 'Thursday',  on: true,  start: '08:00', end: '18:00' },
+      { name: 'Friday',    on: true,  start: '08:00', end: '18:00' },
+      { name: 'Saturday',  on: true,  start: '09:00', end: '15:00' },
+      { name: 'Sunday',    on: false, start: '10:00', end: '14:00' },
+    ],
+    tone: 'friendly',
+    color: '#06b6d4',
+    botName: 'CleanBot',
+    biz: { name: '', email: '', phone: '', city: '', country: 'United Kingdom' },
+  };
+
+  const PLAN_INFO = {
+    starter: { label: 'Starter', price: 99 },
+    pro: { label: 'Pro', price: 179 },
+    enterprise: { label: 'Enterprise', price: 299 },
+  };
+
+  // Apply plan from URL
+  if (urlPlan) {
+    document.querySelectorAll('.plan').forEach(p => p.classList.toggle('selected', p.dataset.plan === state.plan));
+  }
+
+  // ----- Stepper -----
+  const stepperEl = document.getElementById('stepper');
+  for (let i = 1; i <= TOTAL_STEPS; i++) {
+    const pip = document.createElement('div');
+    pip.className = 'pip';
+    pip.dataset.step = i;
+    pip.addEventListener('click', () => { if (i <= step) goTo(i); });
+    stepperEl.appendChild(pip);
+  }
+
+  function updateProgress(){
+    const pct = Math.min(step, TOTAL_STEPS) / TOTAL_STEPS;
+    document.getElementById('progFill').style.transform = `scaleX(${pct})`;
+    document.getElementById('pctLabel').textContent = Math.round(pct * 100) + '%';
+    const labels = {
+      1: 'Business info',
+      2: 'Plan',
+      3: 'Services',
+      4: 'Availability',
+      5: 'Branding',
+    };
+    document.getElementById('stepLabel').textContent =
+      step <= TOTAL_STEPS
+        ? `Step ${String(step).padStart(2,'0')} of 0${TOTAL_STEPS} · ${labels[step]}`
+        : `Complete!`;
+    [...stepperEl.children].forEach((pip, i) => {
+      pip.classList.remove('done', 'current');
+      if (i + 1 < step) pip.classList.add('done');
+      if (i + 1 === step) pip.classList.add('current');
+    });
+  }
+
+  function goTo(n){
+    step = n;
+    document.querySelectorAll('.step-pane').forEach(p => {
+      p.classList.toggle('active', +p.dataset.step === step);
+    });
+    if (step > TOTAL_STEPS) {
+      document.getElementById('navBtns').style.display = 'none';
+      document.getElementById('progressWrap').style.display = 'none';
+    } else {
+      document.getElementById('navBtns').style.display = 'flex';
+      document.getElementById('progressWrap').style.display = 'block';
+    }
+    document.getElementById('backBtn').disabled = step === 1;
+    document.getElementById('nextBtn').innerHTML = step === TOTAL_STEPS
+      ? 'Build my bot <span class="arrow">→</span>'
+      : 'Next <span class="arrow">→</span>';
+    updateProgress();
+    refreshPreview();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  document.getElementById('nextBtn').addEventListener('click', () => {
+    if (step < TOTAL_STEPS) goTo(step + 1);
+    else {
+      // finalize
+      goTo(TOTAL_STEPS + 1);
+      document.getElementById('liveBotName').textContent = state.botName;
+      document.getElementById('livePlan').textContent = PLAN_INFO[state.plan].label;
+    }
+  });
+  document.getElementById('backBtn').addEventListener('click', () => { if (step > 1) goTo(step - 1); });
+
+  // ----- Step 1 inputs -----
+  ['biz_name','biz_email','biz_phone','biz_city','biz_country'].forEach(id => {
+    document.getElementById(id).addEventListener('input', e => {
+      const key = id.replace('biz_','');
+      state.biz[key] = e.target.value;
+      // Update botName if it's still default and biz_name typed
+      if (id === 'biz_name' && state.botName === 'CleanBot' && state.biz.name) {
+        document.getElementById('bot_name').value = state.biz.name + ' Bot';
+        state.botName = state.biz.name + ' Bot';
+      }
+      refreshPreview();
+    });
+  });
+
+  // ----- Step 2 plan selection -----
+  document.querySelectorAll('.plan').forEach(p => {
+    p.addEventListener('click', () => {
+      document.querySelectorAll('.plan').forEach(x => x.classList.remove('selected'));
+      p.classList.add('selected');
+      state.plan = p.dataset.plan;
+      refreshPreview();
+    });
+  });
+
+  // ----- Step 3 services -----
+  function renderServices(){
+    const tbl = document.getElementById('svcTable');
+    // Remove old rows (keep head)
+    [...tbl.querySelectorAll('.svc-row:not(.head)')].forEach(r => r.remove());
+    state.services.forEach((s, i) => {
+      const row = document.createElement('div');
+      row.className = 'svc-row' + (s.on ? ' on' : '');
+      row.innerHTML = `
+        <div class="check">${s.on ? '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4.5" stroke="#04141a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}</div>
+        <input type="text" class="name" value="${s.name.replace(/"/g,'&quot;')}" />
+        <input type="text" value="${s.unit}" />
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="color:var(--text-3);">$</span>
+          <input type="number" value="${s.price}" />
+        </div>
+        <button class="del" title="Remove">×</button>
+      `;
+      const inputs = row.querySelectorAll('input');
+      row.querySelector('.check').addEventListener('click', () => {
+        s.on = !s.on; renderServices(); refreshPreview();
+      });
+      inputs[0].addEventListener('input', e => { s.name = e.target.value; refreshPreview(); });
+      inputs[1].addEventListener('input', e => { s.unit = e.target.value; });
+      inputs[2].addEventListener('input', e => { s.price = +e.target.value || 0; });
+      row.querySelector('.del').addEventListener('click', () => {
+        state.services.splice(i, 1); renderServices(); refreshPreview();
+      });
+      tbl.appendChild(row);
+    });
+  }
+  renderServices();
+  document.getElementById('svcAdd').addEventListener('click', () => {
+    state.services.push({ on: true, name: 'New service', unit: 'per visit', price: 50 });
+    renderServices(); refreshPreview();
+  });
+
+  // ----- Step 4 availability -----
+  function renderDays(){
+    const list = document.getElementById('dayList');
+    list.innerHTML = '';
+    state.days.forEach((d, i) => {
+      const row = document.createElement('div');
+      row.className = 'day-row' + (d.on ? ' on' : ' off');
+      row.innerHTML = `
+        <label class="day-toggle">
+          <span class="switch"></span>
+          <span class="name">${d.name}</span>
+        </label>
+        <input type="time" value="${d.start}" />
+        <input type="time" value="${d.end}" />
+      `;
+      const inputs = row.querySelectorAll('input');
+      row.querySelector('.day-toggle').addEventListener('click', () => {
+        d.on = !d.on; renderDays(); refreshPreview();
+      });
+      inputs[0].addEventListener('input', e => { d.start = e.target.value; });
+      inputs[1].addEventListener('input', e => { d.end = e.target.value; });
+      list.appendChild(row);
+    });
+  }
+  renderDays();
+
+  // Surcharges
+  document.querySelectorAll('.surcharge').forEach(s => {
+    s.addEventListener('click', e => {
+      if (e.target.tagName === 'INPUT') return;
+      s.classList.toggle('on');
+    });
+  });
+
+  // ----- Step 5 branding -----
+  document.getElementById('bot_name').addEventListener('input', e => {
+    state.botName = e.target.value || 'CleanBot';
+    refreshPreview();
+  });
+  document.querySelectorAll('.tone').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tone').forEach(x => x.classList.remove('on'));
+      t.classList.add('on');
+      state.tone = t.dataset.tone;
+      refreshPreview();
+    });
+  });
+  document.querySelectorAll('.color-swatch[data-c]').forEach(s => {
+    s.addEventListener('click', () => {
+      document.querySelectorAll('.color-swatch').forEach(x => x.classList.remove('on'));
+      s.classList.add('on');
+      state.color = s.dataset.c;
+      refreshPreview();
+    });
+  });
+  document.getElementById('customColor').addEventListener('input', e => {
+    state.color = e.target.value;
+    document.querySelectorAll('.color-swatch').forEach(x => x.classList.remove('on'));
+    document.getElementById('customSwatchLabel').classList.add('on');
+    document.getElementById('customSwatchLabel').style.background = state.color;
+    refreshPreview();
+  });
+  document.getElementById('greeting').addEventListener('input', refreshPreview);
+
+  // ----- LIVE PREVIEW -----
+  function toneAdjust(line) {
+    // tweak greeting based on tone
+    const t = state.tone;
+    if (t === 'professional') return line.replace(/👋|🤙|☕/g, '').trim();
+    if (t === 'casual') return line.replace('Hi!', 'Hey!').replace('I can give you', "I'll get you");
+    if (t === 'warm') return line.replace('👋', '☕');
+    return line;
+  }
+
+  function refreshPreview(){
+    const c = state.color;
+    document.documentElement.style.setProperty('--bot-color', c);
+    document.getElementById('pvAvatar').textContent = (state.botName[0] || 'C').toUpperCase();
+    document.getElementById('pvName').textContent = state.botName;
+
+    const greet = document.getElementById('greeting').value || 'Hi! 👋 I\'m the booking assistant.';
+    const body = document.getElementById('pvBody');
+    const services = state.services.filter(s => s.on);
+    const sample = services[0] || { name: 'Clean', price: 100 };
+
+    let convo = [];
+    if (state.tone === 'professional') {
+      convo = [
+        { who: 'bot',  txt: toneAdjust(greet) },
+        { who: 'user', txt: 'I need a ' + (sample.name.toLowerCase()) },
+        { who: 'bot',  txt: 'Of course. May I have your postcode?' },
+        { who: 'user', txt: 'SW9 8RL' },
+        { who: 'bot',  txt: 'Thank you. The estimate is <strong>$' + sample.price + '</strong>. Would you like to schedule?' },
+      ];
+    } else if (state.tone === 'casual') {
+      convo = [
+        { who: 'bot',  txt: toneAdjust(greet) },
+        { who: 'user', txt: 'need a ' + (sample.name.toLowerCase()) },
+        { who: 'bot',  txt: 'sweet. what\'s the postcode?' },
+        { who: 'user', txt: 'SW9 8RL' },
+        { who: 'bot',  txt: "cool — that'll be <strong>$" + sample.price + "</strong>. wanna lock it in?" },
+      ];
+    } else {
+      convo = [
+        { who: 'bot',  txt: toneAdjust(greet) },
+        { who: 'user', txt: 'Yes — ' + (sample.name.toLowerCase()) + ' please' },
+        { who: 'bot',  txt: 'Lovely! What postcode are we cleaning?' },
+        { who: 'user', txt: 'SW9 8RL' },
+        { who: 'bot',  txt: 'Perfect — that\'s <strong>$' + sample.price + '</strong>. I have Friday 9am or Saturday 11am free.' },
+      ];
+    }
+
+    body.innerHTML = '';
+    convo.forEach(m => {
+      const b = document.createElement('div');
+      b.className = 'b ' + m.who;
+      b.innerHTML = m.txt;
+      // user bubbles use color
+      if (m.who === 'user') b.style.background = c;
+      body.appendChild(b);
+    });
+
+    // Set avatar bg
+    document.getElementById('pvAvatar').style.background = `linear-gradient(135deg, ${mix(c, '#ffffff', 0.3)}, ${c})`;
+
+    // Summary
+    const sum = id => document.getElementById(id);
+    sum('sumBiz').textContent = state.biz.name || '—';
+    sum('sumBiz').classList.toggle('muted', !state.biz.name);
+    const pi = PLAN_INFO[state.plan];
+    sum('sumPlan').textContent = pi.label + ' · $' + pi.price + '/mo';
+    sum('sumSvc').textContent = services.length + ' selected';
+    const onDays = state.days.filter(d => d.on).map(d => d.name.slice(0,3));
+    sum('sumAvail').textContent = onDays.length === 0 ? '—' : (onDays.length === 7 ? 'Every day' : onDays.join(', '));
+    sum('sumTone').textContent = state.tone[0].toUpperCase() + state.tone.slice(1);
+  }
+
+  function mix(hex, mixHex, w){
+    // simple linear mix
+    const a = hex2rgb(hex), b = hex2rgb(mixHex);
+    const r = Math.round(a[0] * (1-w) + b[0] * w);
+    const g = Math.round(a[1] * (1-w) + b[1] * w);
+    const bl = Math.round(a[2] * (1-w) + b[2] * w);
+    return `rgb(${r},${g},${bl})`;
+  }
+  function hex2rgb(hex){
+    hex = hex.replace('#','');
+    if (hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
+    return [parseInt(hex.slice(0,2),16), parseInt(hex.slice(2,4),16), parseInt(hex.slice(4,6),16)];
+  }
+
+  refreshPreview();
+  updateProgress();
+})();
+</script>
+
+</div>
+
+<script>
+(function(){
+  function setView(){
+    const v = (window.location.hash || '').replace('#/', '').replace('#', '') || 'sales';
+    document.body.dataset.view = (v === 'onboarding' || v.startsWith('onboarding')) ? 'onboarding' : 'sales';
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+  window.addEventListener('hashchange', setView);
+  setView();
+  // Intercept all links to cleanbot-onboarding.html and cleanbot-sales-page.html
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a');
+    if (!a) return;
+    const href = a.getAttribute('href') || '';
+    if (href.startsWith('cleanbot-onboarding.html')) {
+      e.preventDefault();
+      // Capture ?plan= query
+      const q = href.split('?')[1] || '';
+      if (q) {
+        // Re-apply plan to onboarding state by setting input value AFTER setView mounts (already mounted)
+        const planMatch = /plan=([a-z]+)/.exec(q);
+        if (planMatch) {
+          const plan = planMatch[1];
+          // click the matching .plan card
+          setTimeout(() => {
+            const card = document.querySelector('#view-onboarding .plan[data-plan="' + plan + '"]');
+            if (card) card.click();
+          }, 50);
+        }
+      }
+      window.location.hash = '#/onboarding';
+    } else if (href.startsWith('cleanbot-sales-page.html') || href === '#') {
+      // top-of-page logo or sales link
+      if (href.startsWith('cleanbot-sales-page.html')) {
+        e.preventDefault();
+        window.location.hash = '';
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>

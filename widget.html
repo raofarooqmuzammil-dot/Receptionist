@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CleanBot Widget Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── DEMO PAGE ───────────────────────────────────────────── */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: #0f0f13;
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.demo-bg {
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 20%, rgba(99,102,241,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 80% 80%, rgba(200,255,0,0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 50% at 50% 50%, rgba(20,184,166,0.04) 0%, transparent 70%);
+  pointer-events: none;
+}
+.demo-grid {
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+}
+.demo-label {
+  position: fixed; top: 32px; left: 50%; transform: translateX(-50%);
+  font-size: 13px; font-weight: 600; letter-spacing: 3px;
+  text-transform: uppercase; color: rgba(255,255,255,0.2);
+}
+.demo-site {
+  text-align: center; position: relative; z-index: 1;
+}
+.demo-site h1 {
+  font-size: clamp(32px, 5vw, 64px);
+  font-weight: 700; color: rgba(255,255,255,0.06);
+  letter-spacing: -2px; line-height: 1;
+  user-select: none;
+}
+
+/* ── WIDGET LAUNCHER ─────────────────────────────────────── */
+#cb-launcher {
+  position: fixed;
+  bottom: 28px; right: 28px;
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  border: none; cursor: pointer;
+  z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6, #06b6d4);
+  background-size: 200% 200%;
+  animation: gradientShift 4s ease infinite, launcherPop 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+  box-shadow:
+    0 0 0 0 rgba(99,102,241,0.4),
+    0 8px 32px rgba(99,102,241,0.4),
+    0 2px 8px rgba(0,0,0,0.4);
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s ease;
+}
+#cb-launcher:hover {
+  transform: scale(1.1);
+  box-shadow:
+    0 0 0 8px rgba(99,102,241,0.15),
+    0 12px 40px rgba(99,102,241,0.5),
+    0 2px 8px rgba(0,0,0,0.4);
+}
+#cb-launcher:active { transform: scale(0.95); }
+
+@keyframes gradientShift {
+  0%,100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+@keyframes launcherPop {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.cb-launcher-icon { transition: all 0.3s ease; }
+.cb-launcher-icon svg { width: 26px; height: 26px; fill: white; display: block; }
+.cb-launcher-close { display: none; }
+.cb-launcher-close svg { width: 20px; height: 20px; stroke: white; fill: none; stroke-width: 2.5; stroke-linecap: round; }
+
+#cb-launcher.open .cb-launcher-icon { display: none; }
+#cb-launcher.open .cb-launcher-close { display: block; }
+
+/* Pulse ring */
+.cb-pulse {
+  position: fixed; bottom: 28px; right: 28px;
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  background: rgba(99,102,241,0.3);
+  z-index: 9998;
+  animation: pulseRing 2.5s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes pulseRing {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+/* Notification badge */
+.cb-badge {
+  position: absolute; top: -3px; right: -3px;
+  width: 18px; height: 18px;
+  background: #ef4444;
+  border-radius: 50%;
+  border: 2px solid #0f0f13;
+  font-size: 10px; font-weight: 800;
+  color: white; display: flex; align-items: center; justify-content: center;
+  animation: badgePop 0.4s cubic-bezier(0.34,1.56,0.64,1) 1.5s both;
+}
+@keyframes badgePop {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+/* ── CHAT PANEL ──────────────────────────────────────────── */
+#cb-panel {
+  position: fixed;
+  bottom: 104px; right: 28px;
+  width: 380px;
+  height: 560px;
+  border-radius: 24px;
+  z-index: 9997;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  transform: scale(0.85) translateY(20px);
+  transform-origin: bottom right;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.4s cubic-bezier(0.34,1.26,0.64,1);
+
+  /* Glassmorphism */
+  background: rgba(15, 15, 22, 0.92);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow:
+    0 32px 80px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(255,255,255,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+#cb-panel.open {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* Panel top gradient accent */
+#cb-panel::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(99,102,241,0.8), rgba(139,92,246,0.8), transparent);
+}
+
+/* ── HEADER ──────────────────────────────────────────────── */
+.cb-header {
+  padding: 18px 20px 16px;
+  display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  position: relative;
+  background: rgba(255,255,255,0.02);
+}
+
+.cb-avatar-wrap { position: relative; flex-shrink: 0; }
+
+.cb-avatar {
+  width: 42px; height: 42px; border-radius: 14px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+}
+
+.cb-status-dot {
+  position: absolute; bottom: -1px; right: -1px;
+  width: 12px; height: 12px;
+  background: #22c55e;
+  border-radius: 50%;
+  border: 2px solid rgba(15,15,22,0.9);
+  animation: statusPulse 2s ease infinite;
+}
+@keyframes statusPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(34,197,94,0); }
+}
+
+.cb-header-info { flex: 1; min-width: 0; }
+.cb-bot-name {
+  font-size: 15px; font-weight: 700;
+  color: rgba(255,255,255,0.95);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cb-bot-status {
+  font-size: 12px; color: #22c55e;
+  font-weight: 500; margin-top: 1px;
+  display: flex; align-items: center; gap: 4px;
+}
+
+.cb-header-actions { display: flex; gap: 6px; }
+.cb-header-btn {
+  width: 32px; height: 32px; border-radius: 10px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.4);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s; font-size: 14px;
+}
+.cb-header-btn:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8); }
+
+/* ── MESSAGES ────────────────────────────────────────────── */
+.cb-messages {
+  flex: 1; overflow-y: scroll; overflow-x: hidden;
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 10px;
+  scroll-behavior: smooth;
+  min-height: 0;
+  max-height: 100%;
+}
+
+/* Custom scrollbar */
+.cb-messages::-webkit-scrollbar { width: 3px; }
+.cb-messages::-webkit-scrollbar-track { background: transparent; }
+.cb-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+/* Date divider */
+.cb-date-divider {
+  text-align: center; font-size: 11px;
+  color: rgba(255,255,255,0.2); font-weight: 600;
+  letter-spacing: 1px; text-transform: uppercase;
+  margin: 4px 0;
+}
+
+/* Message bubbles */
+.cb-msg {
+  display: flex; gap: 8px; align-items: flex-end;
+  animation: msgSlideIn 0.35s cubic-bezier(0.34,1.2,0.64,1) both;
+  max-width: 100%;
+}
+@keyframes msgSlideIn {
+  from { opacity:0; transform: translateY(10px) scale(0.96); }
+  to { opacity:1; transform: translateY(0) scale(1); }
+}
+
+.cb-msg.user { flex-direction: row-reverse; }
+
+.cb-msg-avatar {
+  width: 28px; height: 28px; border-radius: 10px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; flex-shrink: 0; margin-bottom: 2px;
+}
+
+.cb-bubble {
+  max-width: 78%;
+  padding: 11px 15px;
+  border-radius: 18px;
+  font-size: 14px; line-height: 1.55;
+  font-weight: 400; position: relative;
+  word-break: break-word;
+}
+
+.cb-msg.bot .cb-bubble {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.9);
+  border-bottom-left-radius: 5px;
+}
+
+.cb-msg.user .cb-bubble {
+  background: linear-gradient(135deg, #6366f1, #7c3aed);
+  color: white; font-weight: 500;
+  border-bottom-right-radius: 5px;
+  box-shadow: 0 4px 16px rgba(99,102,241,0.3);
+}
+
+.cb-msg-time {
+  font-size: 10px; color: rgba(255,255,255,0.2);
+  margin-top: 3px; font-weight: 500;
+  padding: 0 4px;
+}
+.cb-msg.user .cb-msg-time { text-align: right; }
+
+.cb-msg-wrap { display: flex; flex-direction: column; max-width: 78%; }
+.cb-msg.user .cb-msg-wrap { align-items: flex-end; }
+
+/* Typing indicator */
+.cb-typing {
+  display: flex; gap: 8px; align-items: flex-end;
+  animation: msgSlideIn 0.3s ease both;
+}
+.cb-typing-bubble {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 18px; border-bottom-left-radius: 5px;
+  padding: 14px 18px;
+  display: flex; gap: 5px; align-items: center;
+}
+.cb-typing-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(255,255,255,0.4);
+  animation: typingBounce 1.2s ease infinite;
+}
+.cb-typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.cb-typing-dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes typingBounce {
+  0%,60%,100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-5px); opacity: 1; }
+}
+
+/* Quick reply chips */
+.cb-chips {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 0 16px 8px;
+  animation: msgSlideIn 0.4s ease 0.1s both;
+}
+.cb-chip {
+  padding: 7px 14px;
+  border-radius: 100px;
+  background: rgba(99,102,241,0.1);
+  border: 1px solid rgba(99,102,241,0.3);
+  color: rgba(160,165,255,0.9);
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  white-space: nowrap;
+}
+.cb-chip:hover {
+  background: rgba(99,102,241,0.25);
+  border-color: rgba(99,102,241,0.6);
+  color: white; transform: translateY(-1px);
+}
+
+/* ── INPUT AREA ──────────────────────────────────────────── */
+.cb-input-area {
+  padding: 12px 16px 16px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  background: rgba(255,255,255,0.01);
+}
+
+.cb-input-row {
+  display: flex; gap: 8px; align-items: flex-end;
+}
+
+.cb-input {
+  flex: 1;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 11px 14px;
+  color: rgba(255,255,255,0.9);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px; font-weight: 400;
+  outline: none; resize: none;
+  max-height: 100px; min-height: 44px;
+  line-height: 1.5;
+  transition: all 0.2s;
+  overflow-y: auto;
+}
+.cb-input::placeholder { color: rgba(255,255,255,0.25); }
+.cb-input:focus {
+  border-color: rgba(99,102,241,0.5);
+  background: rgba(255,255,255,0.07);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+
+.cb-send-btn {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: linear-gradient(135deg, #6366f1, #7c3aed);
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s cubic-bezier(0.34,1.4,0.64,1);
+  box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+  flex-shrink: 0;
+}
+.cb-send-btn:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(99,102,241,0.5); }
+.cb-send-btn:active { transform: scale(0.95); }
+.cb-send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.cb-send-btn svg { width: 18px; height: 18px; fill: white; display: block; }
+
+.cb-footer-text {
+  text-align: center; font-size: 11px;
+  color: rgba(255,255,255,0.15); margin-top: 10px;
+  font-weight: 500; letter-spacing: 0.3px;
+}
+.cb-footer-text a { color: rgba(99,102,241,0.6); text-decoration: none; }
+.cb-footer-text a:hover { color: rgba(99,102,241,0.9); }
+
+/* Mobile */
+@media (max-width: 480px) {
+  #cb-panel { width: calc(100vw - 20px); right: 10px; bottom: 90px; height: 70vh; border-radius: 20px; }
+  #cb-launcher { bottom: 20px; right: 20px; }
+  .cb-pulse { bottom: 20px; right: 20px; }
+}
+</style>
+</head>
+<body>
+
+<div class="demo-bg"></div>
+<div class="demo-grid"></div>
+<div class="demo-label">CleanBot · Widget Preview</div>
+
+<div class="demo-site">
+  <h1>Sparkle Clean</h1>
+</div>
+
+<!-- PULSE RING -->
+<div class="cb-pulse" id="cb-pulse"></div>
+
+<!-- LAUNCHER BUTTON -->
+<button id="cb-launcher" onclick="toggleWidget()" aria-label="Open chat">
+  <div class="cb-launcher-icon">
+    <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+  </div>
+  <div class="cb-launcher-close">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </div>
+  <div class="cb-badge" id="cb-badge">1</div>
+</button>
+
+<!-- CHAT PANEL -->
+<div id="cb-panel">
+
+  <!-- Header -->
+  <div class="cb-header">
+    <div class="cb-avatar-wrap">
+      <div class="cb-avatar">🧹</div>
+      <div class="cb-status-dot"></div>
+    </div>
+    <div class="cb-header-info">
+      <div class="cb-bot-name" id="cb-bot-name">SparkleBot</div>
+      <div class="cb-bot-status">● Online · Replies instantly</div>
+    </div>
+    <div class="cb-header-actions">
+      <button class="cb-header-btn" onclick="clearChat()" title="Clear chat">↺</button>
+      <button class="cb-header-btn" onclick="toggleWidget()" title="Close">✕</button>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div class="cb-messages" id="cb-messages">
+    <div class="cb-date-divider">Today</div>
+  </div>
+
+  <!-- Quick replies -->
+  <div class="cb-chips" id="cb-chips">
+    <button class="cb-chip" onclick="sendChip(this)">💬 Get a quote</button>
+    <button class="cb-chip" onclick="sendChip(this)">📅 Book a clean</button>
+    <button class="cb-chip" onclick="sendChip(this)">💰 See prices</button>
+    <button class="cb-chip" onclick="sendChip(this)">📍 Areas covered</button>
+  </div>
+
+  <!-- Input -->
+  <div class="cb-input-area">
+    <div class="cb-input-row">
+      <textarea
+        class="cb-input"
+        id="cb-input"
+        placeholder="Type a message..."
+        rows="1"
+        onkeydown="handleKey(event)"
+        oninput="autoResize(this)"
+      ></textarea>
+      <button class="cb-send-btn" id="cb-send" onclick="sendMessage()">
+        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+    </div>
+    <div class="cb-footer-text">Powered by <a href="#">CleanBot AI</a></div>
+  </div>
+
+</div>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────────
+const CONFIG = {
+  webhookUrl: 'https://sliver-aftermost-entrench.ngrok-free.dev/webhook/Chat',
+  botName: 'SparkleBot',
+  businessName: 'Sparkle Clean',
+  welcomeMessage: "Hi there! 👋 I'm SparkleBot, your AI assistant for Sparkle Clean. I can give you a quote, check availability, and book your clean in minutes. How can I help?",
+  color: '#6366f1',
+};
+
+// ── STATE ──────────────────────────────────────────────────
+let isOpen = false;
+let isTyping = false;
+let sessionId = 'session_' + Date.now();
+let messageHistory = [];
+
+// ── INIT ───────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  document.getElementById('cb-bot-name').textContent = CONFIG.botName;
+  setTimeout(() => {
+    addBotMessage(CONFIG.welcomeMessage);
+  }, 800);
+});
+
+// ── TOGGLE ─────────────────────────────────────────────────
+function toggleWidget() {
+  isOpen = !isOpen;
+  const panel = document.getElementById('cb-panel');
+  const launcher = document.getElementById('cb-launcher');
+  const badge = document.getElementById('cb-badge');
+  const pulse = document.getElementById('cb-pulse');
+
+  if (isOpen) {
+    panel.classList.add('open');
+    launcher.classList.add('open');
+    badge.style.display = 'none';
+    pulse.style.display = 'none';
+    setTimeout(() => document.getElementById('cb-input').focus(), 400);
+    scrollToBottom();
+  } else {
+    panel.classList.remove('open');
+    launcher.classList.remove('open');
+  }
+}
+
+// ── MESSAGES ───────────────────────────────────────────────
+function addBotMessage(text) {
+  const msgs = document.getElementById('cb-messages');
+  const now = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'cb-msg bot';
+  wrapper.innerHTML = `
+    <div class="cb-msg-avatar">🤖</div>
+    <div class="cb-msg-wrap">
+      <div class="cb-bubble">${formatMessage(text)}</div>
+      <div class="cb-msg-time">${now}</div>
+    </div>
+  `;
+  msgs.appendChild(wrapper);
+  scrollToBottom();
+
+  // Show chips after first bot message
+  showChips();
+}
+
+function addUserMessage(text) {
+  const msgs = document.getElementById('cb-messages');
+  const now = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  hideChips();
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'cb-msg user';
+  wrapper.innerHTML = `
+    <div class="cb-msg-wrap">
+      <div class="cb-bubble">${escapeHtml(text)}</div>
+      <div class="cb-msg-time">${now}</div>
+    </div>
+  `;
+  document.getElementById('cb-messages').appendChild(wrapper);
+  scrollToBottom();
+}
+
+function showTyping() {
+  hideTyping();
+  const msgs = document.getElementById('cb-messages');
+  const div = document.createElement('div');
+  div.className = 'cb-typing'; div.id = 'cb-typing';
+  div.innerHTML = `
+    <div class="cb-msg-avatar">🤖</div>
+    <div class="cb-typing-bubble">
+      <div class="cb-typing-dot"></div>
+      <div class="cb-typing-dot"></div>
+      <div class="cb-typing-dot"></div>
+    </div>
+  `;
+  msgs.appendChild(div);
+  scrollToBottom();
+}
+
+function hideTyping() {
+  const t = document.getElementById('cb-typing');
+  if (t) t.remove();
+}
+
+function showChips() {
+  document.getElementById('cb-chips').style.display = 'flex';
+}
+function hideChips() {
+  document.getElementById('cb-chips').style.display = 'none';
+}
+
+// ── SEND ───────────────────────────────────────────────────
+async function sendMessage(text) {
+  const input = document.getElementById('cb-input');
+  const msg = text || input.value.trim();
+  if (!msg || isTyping) return;
+
+  input.value = '';
+  autoResize(input);
+  addUserMessage(msg);
+  messageHistory.push({ role: 'user', content: msg });
+
+  isTyping = true;
+  document.getElementById('cb-send').disabled = true;
+  showTyping();
+
+  try {
+    const response = await fetch(CONFIG.webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+      body: JSON.stringify({
+        message: msg,
+        sessionId: sessionId,
+        history: messageHistory.slice(-10),
+        businessName: CONFIG.businessName
+      })
+    });
+
+    let reply;
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const data = await response.json();
+      reply = data.reply || data.message || data.text || "Thanks for your message!";
+    } else {
+      reply = await response.text();
+    }
+    if (!reply || reply.trim() === '') reply = "Thanks for your message! I'll get back to you shortly.";
+    hideTyping();
+    messageHistory.push({ role: 'assistant', content: reply });
+    addBotMessage(reply);
+
+  } catch (err) {
+    hideTyping();
+    const reply = "Sorry, I'm having trouble connecting right now. Please try again!";
+    messageHistory.push({ role: 'assistant', content: reply });
+    addBotMessage(reply);
+  }
+
+  isTyping = false;
+  document.getElementById('cb-send').disabled = false;
+
+  // Show chips after reply
+  setTimeout(showChips, 300);
+}
+
+function sendChip(el) {
+  sendMessage(el.textContent.trim().replace(/^[^\w]+/, '').trim());
+}
+
+// ── UTILS ──────────────────────────────────────────────────
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+function scrollToBottom() {
+  setTimeout(() => {
+    const msgs = document.getElementById('cb-messages');
+    msgs.scrollTop = msgs.scrollHeight;
+  }, 50);
+}
+
+function clearChat() {
+  const msgs = document.getElementById('cb-messages');
+  msgs.innerHTML = '<div class="cb-date-divider">Today</div>';
+  messageHistory = [];
+  sessionId = 'session_' + Date.now();
+  setTimeout(() => addBotMessage(CONFIG.welcomeMessage), 300);
+}
+
+function formatMessage(text) {
+  return escapeHtml(text)
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+}
+
+function escapeHtml(text) {
+  return text
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
