@@ -284,6 +284,8 @@ body {
   color: white; font-weight: 500;
   border-bottom-right-radius: 5px;
   box-shadow: 0 4px 16px rgba(99,102,241,0.3);
+  min-width: 48px;
+  text-align: center;
 }
 
 .cb-msg-time {
@@ -668,8 +670,11 @@ function autoResize(el) {
 function scrollToBottom() {
   setTimeout(() => {
     const msgs = document.getElementById('cb-messages');
-    msgs.scrollTop = msgs.scrollHeight;
-  }, 50);
+    const lastMsg = msgs.lastElementChild;
+    if (lastMsg) {
+      lastMsg.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, 100);
 }
 
 function clearChat() {
