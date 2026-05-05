@@ -678,10 +678,11 @@ function scrollToBottom() {
     const children = msgs.children;
     if (children.length > 0) {
       const lastMsg = children[children.length - 1];
-      lastMsg.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Scroll so new message top is visible
+      const msgTop = lastMsg.offsetTop;
+      msgs.scrollTop = msgTop - 16;
     }
-    msgs.scrollTop = msgs.scrollHeight;
-  }, 150);
+  }, 200);
 }
 
 function clearChat() {
