@@ -285,10 +285,11 @@ body {
   color: white; font-weight: 500;
   border-bottom-right-radius: 5px;
   box-shadow: 0 4px 16px rgba(99,102,241,0.3);
-  min-width: 60px;
-  text-align: left;
+  display: inline-block;
+  white-space: normal;
   word-break: break-word;
-  white-space: pre-wrap;
+  min-width: 0;
+  width: auto;
 }
 
 .cb-msg-time {
@@ -548,7 +549,7 @@ function addBotMessage(text) {
     </div>
   `;
   msgs.appendChild(wrapper);
-  scrollToBottom();
+  scrollToBottom(true);
 
   // Show chips after first bot message
   showChips();
@@ -568,7 +569,7 @@ function addUserMessage(text) {
     </div>
   `;
   document.getElementById('cb-messages').appendChild(wrapper);
-  scrollToBottom();
+  scrollToBottom(false);
 }
 
 function showTyping() {
@@ -672,15 +673,19 @@ function autoResize(el) {
   el.style.height = Math.min(el.scrollHeight, 100) + 'px';
 }
 
-function scrollToBottom() {
+function scrollToBottom(toTop) {
   setTimeout(() => {
     const msgs = document.getElementById('cb-messages');
-    const children = msgs.children;
-    if (children.length > 0) {
-      const lastMsg = children[children.length - 1];
-      // Scroll so new message top is visible
-      const msgTop = lastMsg.offsetTop;
-      msgs.scrollTop = msgTop - 16;
+    if (toTop) {
+      // Scroll to show TOP of last message
+      const children = msgs.children;
+      if (children.length > 0) {
+        const last = children[children.length - 1];
+        msgs.scrollTop = last.offsetTop - 12;
+      }
+    } else {
+      // Scroll to bottom (for user messages)
+      msgs.scrollTop = msgs.scrollHeight;
     }
   }, 200);
 }
