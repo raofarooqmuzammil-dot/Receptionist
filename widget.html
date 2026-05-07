@@ -125,10 +125,10 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0f0f13; min-he
 
   const CONFIG = {
     webhook: 'https://sliver-aftermost-entrench.ngrok-free.dev/webhook/Chat',
+    clientId: '90710242-5d2e-4990-8f10-bb4b0001bb3e',
     businessName: 'Sparkle Clean',
     welcome: "Hi! I'm SparkleBot for Sparkle Clean. How can I help you today?",
     timeoutMs: 20000,
-    historyLimit: 20,
   };
 
   const $ = (id) => document.getElementById(id);
@@ -145,8 +145,13 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0f0f13; min-he
   let isOpen = false;
   let busy = false;
   let welcomed = false;
-  let sessionId = 's' + Date.now();
-  let history = [];
+
+  // Persistent session ID — survives page refresh, resets only on clear
+  let sessionId = localStorage.getItem('cleanbot_session');
+  if (!sessionId) {
+    sessionId = 's_' + crypto.randomUUID();
+    localStorage.setItem('cleanbot_session', sessionId);
+  }
 
   const isCoarsePointer = matchMedia('(pointer: coarse)').matches;
 
@@ -268,10 +273,6 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0f0f13; min-he
     inp.value = '';
     inp.style.height = 'auto';
     userMsg(message);
-    history.push({ role: 'user', content: message });
-    if (history.length > CONFIG.historyLimit) {
-      history = history.slice(-CONFIG.historyLimit);
-    }
 
     busy = true;
     sbtn.disabled = true;
@@ -289,9 +290,8 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0f0f13; min-he
         },
         body: JSON.stringify({
           message,
-          sessionId,
-          history: history.slice(-10),
-          businessName: CONFIG.businessName,
+          session_id: sessionId,
+          client_id: CONFIG.clientId,
         }),
         signal: ctrl.signal,
       });
@@ -308,7 +308,6 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0f0f13; min-he
       if (!reply.trim()) reply = "I'm here to help! Could you tell me a bit more?";
 
       removeTyping();
-      history.push({ role: 'assistant', content: reply });
       botMsg(reply);
     } catch (err) {
       removeTyping();
@@ -328,8 +327,9 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0f0f13; min-he
 
   function clearChat() {
     msgs.innerHTML = '';
-    history = [];
-    sessionId = 's' + Date.now();
+    // Generate a new session ID and clear localStorage
+    sessionId = 's_' + crypto.randomUUID();
+    localStorage.setItem('cleanbot_session', sessionId);
     welcomed = false;
     chips.hidden = false;
     chips.style.display = '';
