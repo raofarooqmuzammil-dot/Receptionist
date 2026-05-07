@@ -303,8 +303,14 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0f0f13; min-he
         const data = await res.json();
         reply = data.reply || data.message || data.text || '';
       } else {
-        reply = await res.text();
-      }
+  const text = await res.text();
+  try {
+    const data = JSON.parse(text);
+    reply = data.reply || data.message || data.text || text;
+  } catch(e) {
+    reply = text;
+  }
+}
       if (!reply.trim()) reply = "I'm here to help! Could you tell me a bit more?";
 
       removeTyping();
