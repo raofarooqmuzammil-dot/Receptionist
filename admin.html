@@ -6,56 +6,11 @@
 <title>CleanBot Admin</title>
 <!--
   ============================================================
-  REQUIRED SUPABASE SETUP — run this once in the SQL editor:
+  REQUIRED SUPABASE SETUP (run once in SQL editor)
   ============================================================
-
-  -- 1. Clients table
-  create table if not exists clients (
-    id uuid primary key default gen_random_uuid(),
-    business_name text not null,
-    owner_name text,
-    email text,
-    phone text,
-    bot_name text not null,
-    plan text default 'starter' check (plan in ('starter','pro','fullstack')),
-    services text[] default '{}',
-    areas text[] default '{}',
-    pricing jsonb default '[]'::jsonb,
-    slots text[] default '{}',
-    tone text default 'friendly',
-    language text default 'English',
-    booking_rules text,
-    fallback_message text,
-    active boolean default true,
-    bot_color text default '#7C6FFF',
-    system_prompt text,
-    use_auto_prompt boolean default true,
-    created_at timestamptz default now(),
-    updated_at timestamptz default now()
-  );
-
-  -- 2. Auto-update updated_at
-  create or replace function set_updated_at() returns trigger as $$
-  begin new.updated_at = now(); return new; end; $$ language plpgsql;
-  drop trigger if exists clients_updated_at on clients;
-  create trigger clients_updated_at before update on clients
-    for each row execute function set_updated_at();
-
-  -- 3. Row Level Security — only logged-in users can touch clients
-  alter table clients enable row level security;
-  drop policy if exists "auth_all" on clients;
-  create policy "auth_all" on clients for all
-    to authenticated using (true) with check (true);
-
-  -- 4. Create the admin user in Supabase dashboard:
-  --    Authentication → Users → Add user → set email + password.
-  --    Then disable "Allow new users to sign up" in Auth settings
-  --    so nobody can self-register.
-
-  ============================================================
-  IMPORTANT: replace SUPABASE_KEY below with your **anon** key,
-  NOT the service_role key. The anon key is safe in the browser
-  because RLS protects the data.
+  See setup notes from your previous admin.html for the
+  clients table, RLS, users table, helper functions,
+  and auth trigger (Phase 1A, 1B, 1C, 2A).
   ============================================================
 -->
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -188,6 +143,8 @@ body { background: var(--bg); color: var(--text); font-family: 'Bricolage Grotes
 .action-btn { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; border: none; font-family: 'Bricolage Grotesque', sans-serif; }
 .ab-edit { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(124,111,255,0.2); }
 .ab-edit:hover { background: rgba(124,111,255,0.15); }
+.ab-embed { background: rgba(34,197,94,0.08); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+.ab-embed:hover { background: rgba(34,197,94,0.15); }
 .ab-copy { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border2); }
 .ab-copy:hover { color: var(--text); }
 .ab-delete { background: var(--red-dim); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
@@ -298,6 +255,110 @@ body { background: var(--bg); color: var(--text); font-family: 'Bricolage Grotes
 .info-row .info-label { color: var(--text-muted); font-weight: 600; }
 .info-row .info-value { font-weight: 600; }
 
+/* ====== NEW: EMBED CODE + SUCCESS MODAL ====== */
+.code-block {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  word-break: break-all;
+  line-height: 1.6;
+  user-select: all;
+}
+.code-block:hover { border-color: var(--accent); }
+
+.success-card { max-width: 560px; }
+.success-icon-wrap { text-align: center; margin-bottom: 8px; }
+.success-icon-big {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px; height: 64px;
+  border-radius: 16px;
+  background: var(--green-dim);
+  border: 1px solid rgba(34,197,94,0.25);
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+.success-title-big {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  text-align: center;
+  margin-bottom: 6px;
+}
+.success-sub-big {
+  font-size: 14px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 28px;
+  line-height: 1.5;
+}
+
+.invite-status-card {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+.invite-status-card.success { border-color: rgba(34,197,94,0.3); }
+.invite-status-card.warn { border-color: rgba(245,158,11,0.3); }
+.invite-icon { font-size: 22px; flex-shrink: 0; }
+.invite-body { flex: 1; }
+.invite-body strong { display: block; font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+.invite-body span { font-size: 13px; color: var(--text-muted); }
+
+.embed-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  margin-top: 8px;
+}
+.embed-row .code-block { flex: 1; margin: 0; }
+.embed-copy-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 0 18px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.embed-copy-btn:hover { background: var(--accent2); }
+.embed-copy-btn.copied { background: var(--green); }
+
+/* Embed code section inside edit modal */
+.embed-section {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+.embed-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 @media (max-width: 900px) {
   .sidebar { width: 200px; }
   .main { margin-left: 200px; padding: 24px 20px; }
@@ -308,6 +369,8 @@ body { background: var(--bg); color: var(--text); font-family: 'Bricolage Grotes
   .sidebar { display: none; }
   .main { margin-left: 0; }
   .clients-table th:nth-child(4), .clients-table td:nth-child(4) { display: none; }
+  .embed-row { flex-direction: column; }
+  .embed-copy-btn { padding: 12px; }
 }
 </style>
 </head>
@@ -467,7 +530,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Bricolage Grotes
   </div>
 </div>
 
-<!-- ===== CLIENT MODAL ===== -->
+<!-- ===== CLIENT MODAL (Add / Edit) ===== -->
 <div class="modal-overlay" id="client-modal">
   <div class="modal">
     <div class="modal-header">
@@ -477,12 +540,25 @@ body { background: var(--bg); color: var(--text); font-family: 'Bricolage Grotes
     <div class="modal-body">
       <input type="hidden" id="m-id">
 
+      <!-- Embed code section — only shown when editing an existing client -->
+      <div id="m-embed-section" class="embed-section" style="display:none">
+        <div class="embed-section-label">
+          <span>🔗 Embed Code</span>
+          <button class="btn btn-outline btn-sm" id="m-resend-invite-btn">📧 Resend Invite</button>
+        </div>
+        <div class="embed-row">
+          <div class="code-block" id="m-embed-code"></div>
+          <button class="embed-copy-btn" id="m-embed-copy-btn">📋 Copy</button>
+        </div>
+        <div class="mf-hint" style="margin-top:8px">Give this snippet to the client to paste on their website.</div>
+      </div>
+
       <div class="mf-row">
         <div class="mf"><label>Business Name <span class="req">*</span></label><input type="text" id="m-bname" placeholder="e.g. Sparkle Clean Ltd"></div>
         <div class="mf"><label>Owner Name</label><input type="text" id="m-oname" placeholder="e.g. Sarah Johnson"></div>
       </div>
       <div class="mf-row">
-        <div class="mf"><label>Email</label><input type="email" id="m-email" placeholder="owner@business.com"></div>
+        <div class="mf"><label>Email <span class="req">*</span></label><input type="email" id="m-email" placeholder="owner@business.com"></div>
         <div class="mf"><label>Phone</label><input type="tel" id="m-phone" placeholder="+44 7700 900000"></div>
       </div>
       <div class="mf-row">
@@ -590,6 +666,63 @@ body { background: var(--bg); color: var(--text); font-family: 'Bricolage Grotes
   </div>
 </div>
 
+<!-- ===== CREATE SUCCESS MODAL ===== -->
+<div class="modal-overlay" id="create-success-modal">
+  <div class="modal success-card">
+    <div class="modal-header" style="border-bottom:none;padding-bottom:0">
+      <div style="flex:1"></div>
+      <button class="modal-close" id="success-close-btn">✕</button>
+    </div>
+    <div class="modal-body" style="padding-top:0">
+      <div class="success-icon-wrap">
+        <div class="success-icon-big">✓</div>
+      </div>
+      <div class="success-title-big" id="success-title">Client created!</div>
+      <div class="success-sub-big" id="success-sub">Your new client is all set up and ready to go.</div>
+
+      <div class="invite-status-card" id="invite-status">
+        <div class="invite-icon" id="invite-icon">📧</div>
+        <div class="invite-body">
+          <strong id="invite-status-title">Magic link invite sent</strong>
+          <span id="invite-status-detail">Email sent to the client.</span>
+        </div>
+      </div>
+
+      <div class="mf" style="margin-bottom:0">
+        <label>🔗 Embed code (give this to the client)</label>
+        <div class="embed-row">
+          <div class="code-block" id="success-embed-code"></div>
+          <button class="embed-copy-btn" id="success-copy-btn">📋 Copy</button>
+        </div>
+        <div class="mf-hint" style="margin-top:10px;line-height:1.6">
+          The client pastes this on their website. When customers chat with the widget, they'll talk to <strong style="color:var(--text)">this specific client's bot</strong>.
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" style="border-top:1px solid var(--border)">
+      <div></div>
+      <button class="btn btn-primary" id="success-done-btn">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== EMBED CODE VIEW MODAL (from row button) ===== -->
+<div class="modal-overlay" id="embed-view-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <div class="modal-title" id="embed-view-title">Embed code</div>
+      <button class="modal-close" id="embed-view-close-btn">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="mf-hint" style="margin-bottom:12px">Paste this on the client's website to enable their AI receptionist:</div>
+      <div class="embed-row">
+        <div class="code-block" id="embed-view-code"></div>
+        <button class="embed-copy-btn" id="embed-view-copy-btn">📋 Copy</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== CONFIRM MODAL ===== -->
 <div class="modal-overlay" id="confirm-modal">
   <div class="modal confirm-modal">
@@ -612,9 +745,13 @@ body { background: var(--bg); color: var(--text); font-family: 'Bricolage Grotes
 // CONFIG — replace with YOUR values
 // ============================================================
 const SUPABASE_URL = 'https://ipelkbnxcfgpqfpntqkl.supabase.co';
-// IMPORTANT: this MUST be the anon (public) key, NOT service_role.
-// Find it in Supabase → Project Settings → API → anon/public key.
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwZWxrYm54Y2ZncHFmcG50cWtsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDk4NjUsImV4cCI6MjA5MzQ4NTg2NX0.AeJzq_bYXkfnE_d4gjaSF3e8iBdubTlXeVB2y8AczTE';
+
+// URL of your hosted widget JS — update if it lives somewhere else
+const WIDGET_URL = 'https://receptionist-zeta.vercel.app/widget.js';
+
+// Where clients are sent after clicking their magic link
+const CLIENT_DASHBOARD_URL = window.location.origin + '/dashboard.html';
 
 const PAGE_SIZE = 20;
 
@@ -631,6 +768,20 @@ const $ = (id) => document.getElementById(id);
 async function checkSession() {
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
+    // Check role — only admins can access this panel
+    const { data: userRow } = await sb.from('users').select('role').eq('id', session.user.id).single();
+    if (!userRow || userRow.role !== 'admin') {
+      // Not an admin — sign out and redirect to client dashboard
+      if (userRow && userRow.role === 'client') {
+        window.location.href = '/dashboard.html';
+        return;
+      }
+      // No role at all → block
+      await sb.auth.signOut();
+      showLogin();
+      showToast('This account does not have admin access.', 'error');
+      return;
+    }
     enterDashboard(session.user);
   } else {
     showLogin();
@@ -676,6 +827,19 @@ $('login-btn').addEventListener('click', async () => {
     err.classList.add('show');
     return;
   }
+
+  // Check role before letting them in
+  const { data: userRow } = await sb.from('users').select('role').eq('id', data.user.id).single();
+  if (!userRow || userRow.role !== 'admin') {
+    if (userRow && userRow.role === 'client') {
+      window.location.href = '/dashboard.html';
+      return;
+    }
+    await sb.auth.signOut();
+    err.textContent = 'This account does not have admin access.';
+    err.classList.add('show');
+    return;
+  }
   enterDashboard(data.user);
 });
 
@@ -702,7 +866,6 @@ $('change-password-btn').addEventListener('click', async () => {
 
   btn.disabled = true; btn.textContent = 'Updating…';
 
-  // Re-verify current password by attempting to sign in again
   const { data: { session } } = await sb.auth.getSession();
   const email = session?.user?.email;
   const { error: verifyErr } = await sb.auth.signInWithPassword({ email, password: current });
@@ -821,6 +984,7 @@ function renderClients() {
       <td style="color:var(--text-muted);font-size:13px">${escHtml(areas)}</td>
       <td><span class="status-dot ${statusDot}"></span><span style="font-size:13px;color:${statusColor}">${statusText}</span></td>
       <td><div class="action-btns">
+        <button class="action-btn ab-embed" data-embed="${c.id}" title="View embed code">&lt;/&gt;</button>
         <button class="action-btn ab-edit" data-edit="${c.id}">✏️ Edit</button>
         <button class="action-btn ab-copy" data-copy="${c.id}" title="Copy client ID">📋</button>
         <button class="action-btn ab-delete" data-delete="${c.id}">🗑️</button>
@@ -832,6 +996,7 @@ function renderClients() {
   tbody.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => openEditModal(b.dataset.edit)));
   tbody.querySelectorAll('[data-delete]').forEach(b => b.addEventListener('click', () => openDeleteConfirm(b.dataset.delete)));
   tbody.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', () => copyClientId(b.dataset.copy)));
+  tbody.querySelectorAll('[data-embed]').forEach(b => b.addEventListener('click', () => openEmbedViewModal(b.dataset.embed)));
 
   // Pagination
   if (filtered.length > PAGE_SIZE) {
@@ -879,6 +1044,100 @@ function copyClientId(id) {
   navigator.clipboard.writeText(id);
   showToast('📋 Client ID copied', 'success');
 }
+
+// ============================================================
+// EMBED CODE GENERATION
+// ============================================================
+function getEmbedCode(clientId) {
+  return `<script src="${WIDGET_URL}" data-client-id="${clientId}"><\/script>`;
+}
+
+async function copyToClipboard(text, buttonEl) {
+  try {
+    await navigator.clipboard.writeText(text);
+    if (buttonEl) {
+      const orig = buttonEl.textContent;
+      buttonEl.textContent = '✓ Copied';
+      buttonEl.classList.add('copied');
+      setTimeout(() => {
+        buttonEl.textContent = orig;
+        buttonEl.classList.remove('copied');
+      }, 2000);
+    }
+    showToast('✅ Embed code copied to clipboard', 'success');
+  } catch (e) {
+    showToast('Copy failed — please select manually', 'error');
+  }
+}
+
+// ============================================================
+// EMBED VIEW MODAL (clicking "</>"  on a row)
+// ============================================================
+$('embed-view-close-btn').addEventListener('click', () => $('embed-view-modal').classList.remove('open'));
+$('embed-view-modal').addEventListener('click', e => { if (e.target.id === 'embed-view-modal') $('embed-view-modal').classList.remove('open'); });
+$('embed-view-copy-btn').addEventListener('click', e => copyToClipboard($('embed-view-code').textContent, e.currentTarget));
+
+function openEmbedViewModal(clientId) {
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) return;
+  $('embed-view-title').textContent = `Embed code — ${c.business_name}`;
+  $('embed-view-code').textContent = getEmbedCode(clientId);
+  $('embed-view-modal').classList.add('open');
+}
+
+// ============================================================
+// CREATE SUCCESS MODAL
+// ============================================================
+$('success-close-btn').addEventListener('click', () => $('create-success-modal').classList.remove('open'));
+$('success-done-btn').addEventListener('click', () => $('create-success-modal').classList.remove('open'));
+$('success-copy-btn').addEventListener('click', e => copyToClipboard($('success-embed-code').textContent, e.currentTarget));
+
+function showCreateSuccessModal(client, inviteResult) {
+  $('success-title').textContent = `${client.business_name} is set up!`;
+  $('success-sub').textContent = 'Your new client is configured and ready to use.';
+  $('success-embed-code').textContent = getEmbedCode(client.id);
+
+  const statusEl = $('invite-status');
+  if (inviteResult.sent) {
+    statusEl.className = 'invite-status-card success';
+    $('invite-icon').textContent = '📧';
+    $('invite-status-title').textContent = 'Magic link invite sent';
+    $('invite-status-detail').textContent = `Email sent to ${client.email}. They'll click the link to access their dashboard.`;
+  } else if (inviteResult.skipped) {
+    statusEl.className = 'invite-status-card warn';
+    $('invite-icon').textContent = '⚠️';
+    $('invite-status-title').textContent = 'Invite NOT sent';
+    $('invite-status-detail').textContent = 'No email provided. Client won\'t have a dashboard login until you add one and resend.';
+  } else {
+    statusEl.className = 'invite-status-card warn';
+    $('invite-icon').textContent = '⚠️';
+    $('invite-status-title').textContent = 'Invite failed to send';
+    $('invite-status-detail').textContent = inviteResult.error || 'Try resending from the Edit panel later.';
+  }
+
+  $('create-success-modal').classList.add('open');
+}
+
+// ============================================================
+// RESEND INVITE (from edit modal)
+// ============================================================
+$('m-resend-invite-btn').addEventListener('click', async () => {
+  const email = $('m-email').value.trim();
+  if (!email) return showToast('No email on file. Add an email and save first.', 'error');
+
+  const btn = $('m-resend-invite-btn');
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Sending…';
+
+  const { error } = await sb.auth.signInWithOtp({
+    email,
+    options: { shouldCreateUser: true, emailRedirectTo: CLIENT_DASHBOARD_URL }
+  });
+
+  btn.disabled = false; btn.textContent = orig;
+  if (error) return showToast('Failed to resend: ' + error.message, 'error');
+  showToast('✅ Invite resent to ' + email, 'success');
+});
 
 // ============================================================
 // MODAL — TAG INPUTS, PRICING TABLE, FORM STATE
@@ -1038,9 +1297,11 @@ $('modal-close-btn').addEventListener('click', closeModal);
 $('modal-cancel-btn').addEventListener('click', closeModal);
 $('client-modal').addEventListener('click', e => { if (e.target.id === 'client-modal') closeModal(); });
 $('save-btn').addEventListener('click', saveClient);
+$('m-embed-copy-btn').addEventListener('click', e => copyToClipboard($('m-embed-code').textContent, e.currentTarget));
 
 function openAddModal() {
   clearModal();
+  $('m-embed-section').style.display = 'none';
   $('modal-title').textContent = 'Add New Client';
   $('save-btn').textContent = 'Add Client';
   $('client-modal').classList.add('open');
@@ -1081,6 +1342,10 @@ function openEditModal(id) {
   })) : [];
   renderPricing();
 
+  // Show embed code section at top
+  $('m-embed-section').style.display = 'block';
+  $('m-embed-code').textContent = getEmbedCode(c.id);
+
   $('client-modal').classList.add('open');
 }
 
@@ -1106,13 +1371,14 @@ async function saveClient() {
   const id = $('m-id').value;
   const bname = $('m-bname').value.trim();
   const botname = $('m-botname').value.trim();
+  const email = $('m-email').value.trim();
 
   if (!bname || !botname) return showToast('Business Name and Bot Name are required', 'error');
+  if (!id && !email) return showToast('Email is required for new clients (so they can log in)', 'error');
 
   const colorVal = $('m-color').value.trim();
   if (colorVal && !isValidHex(colorVal)) return showToast('Bot color must be a hex like #7C6FFF', 'error');
 
-  // Make sure prompt exists — generate if empty
   if (!$('m-prompt').value.trim()) regeneratePrompt();
   const prompt = $('m-prompt').value.trim();
   if (!prompt) return showToast('System prompt cannot be empty', 'error');
@@ -1120,7 +1386,7 @@ async function saveClient() {
   const data = {
     business_name: bname,
     owner_name: $('m-oname').value.trim() || null,
-    email: $('m-email').value.trim() || null,
+    email: email || null,
     phone: $('m-phone').value.trim() || null,
     bot_name: botname,
     plan: $('m-plan').value,
@@ -1141,16 +1407,51 @@ async function saveClient() {
   const btn = $('save-btn');
   btn.disabled = true; btn.textContent = 'Saving…';
 
-  let error;
-  if (id) ({ error } = await sb.from('clients').update(data).eq('id', id));
-  else ({ error } = await sb.from('clients').insert(data));
+  if (id) {
+    // ==== UPDATE EXISTING CLIENT ====
+    const { error } = await sb.from('clients').update(data).eq('id', id);
+    btn.disabled = false; btn.textContent = 'Save Changes';
+    if (error) return showToast('Failed to save: ' + error.message, 'error');
+    showToast('✅ Client updated', 'success');
+    closeModal();
+    loadClients();
+  } else {
+    // ==== INSERT NEW CLIENT + SEND INVITE ====
+    const { data: newClient, error: insertError } = await sb
+      .from('clients')
+      .insert(data)
+      .select()
+      .single();
 
-  btn.disabled = false; btn.textContent = id ? 'Save Changes' : 'Add Client';
+    if (insertError) {
+      btn.disabled = false; btn.textContent = 'Add Client';
+      return showToast('Failed to save: ' + insertError.message, 'error');
+    }
 
-  if (error) return showToast('Failed to save: ' + error.message, 'error');
-  showToast(id ? '✅ Client updated' : '✅ Client added', 'success');
-  closeModal();
-  loadClients();
+    // Send magic-link invite
+    let inviteResult = { sent: false, skipped: false, error: null };
+    if (newClient.email) {
+      const { error: otpError } = await sb.auth.signInWithOtp({
+        email: newClient.email,
+        options: {
+          shouldCreateUser: true,
+          emailRedirectTo: CLIENT_DASHBOARD_URL
+        }
+      });
+      if (otpError) {
+        inviteResult.error = otpError.message;
+      } else {
+        inviteResult.sent = true;
+      }
+    } else {
+      inviteResult.skipped = true;
+    }
+
+    btn.disabled = false; btn.textContent = 'Add Client';
+    closeModal();
+    loadClients();
+    showCreateSuccessModal(newClient, inviteResult);
+  }
 }
 
 // ============================================================
